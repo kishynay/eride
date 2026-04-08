@@ -1,9 +1,9 @@
 "use client"
-import { useState, useEffect, type FormEvent } from "react"
+import { Suspense, useState, useEffect, type FormEvent } from "react"
 import { supabase } from "../../lib/supabase"
 import { useSearchParams } from "next/navigation"
 
-export default function FeedbackPage() {
+function FeedbackPageContent() {
   const searchParams = useSearchParams()
   const bookingId = searchParams.get("booking")
   
@@ -239,5 +239,13 @@ export default function FeedbackPage() {
         </form>
       </div>
     </div>
+  )
+}
+
+export default function FeedbackPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#f8f9fa" }} />}>
+      <FeedbackPageContent />
+    </Suspense>
   )
 }

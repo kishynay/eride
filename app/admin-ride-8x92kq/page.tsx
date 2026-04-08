@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabase"
 
 export default function Admin() {
   const [authenticated, setAuthenticated] = useState(false)
+  const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [bookings, setBookings] = useState<any[]>([])
   const [drivers, setDrivers] = useState<any[]>([])
@@ -11,11 +12,15 @@ export default function Admin() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
-    if (password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
+    if (
+      username === process.env.NEXT_PUBLIC_ADMIN_USERNAME &&
+      password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD
+    ) {
       setAuthenticated(true)
       localStorage.setItem("admin_auth", "true")
     } else {
-      alert("Incorrect password")
+      alert("Incorrect username or password")
+      setUsername("")
       setPassword("")
     }
   }
@@ -129,9 +134,25 @@ export default function Admin() {
             color: "#666",
             marginBottom: 24
           }}>
-            Enter password to continue
+            Enter credentials to continue
           </p>
           <form onSubmit={handleLogin}>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Username"
+              style={{
+                width: "100%",
+                padding: 12,
+                border: "1px solid #e0e0e0",
+                borderRadius: 8,
+                fontSize: 14,
+                marginBottom: 12,
+                boxSizing: "border-box"
+              }}
+              autoFocus
+            />
             <input
               type="password"
               value={password}
@@ -146,7 +167,6 @@ export default function Admin() {
                 marginBottom: 16,
                 boxSizing: "border-box"
               }}
-              autoFocus
             />
             <button
               type="submit"
