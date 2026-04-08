@@ -8,16 +8,114 @@ export default function Home() {
       position: "relative",
       overflow: "hidden"
     }}>
-      {/* Background Pattern */}
+      {/* Animated Background Pattern */}
       <div style={{
         position: "absolute",
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        background: "radial-gradient(circle at 20% 50%, rgba(76, 175, 80, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(33, 150, 243, 0.1) 0%, transparent 50%)",
+        opacity: 0.25,
         zIndex: 0
-      }}></div>
+      }}>
+        {/* Road Lines */}
+        <div style={{
+          position: "absolute",
+          top: "20%",
+          left: "-10%",
+          width: "120%",
+          height: "2px",
+          background: "linear-gradient(90deg, transparent 0%, #4CAF50 50%, transparent 100%)",
+          transform: "rotate(-5deg)"
+        }}></div>
+        <div style={{
+          position: "absolute",
+          top: "40%",
+          left: "-10%",
+          width: "120%",
+          height: "2px",
+          background: "linear-gradient(90deg, transparent 0%, #2196F3 50%, transparent 100%)",
+          transform: "rotate(5deg)"
+        }}></div>
+        <div style={{
+          position: "absolute",
+          top: "60%",
+          left: "-10%",
+          width: "120%",
+          height: "2px",
+          background: "linear-gradient(90deg, transparent 0%, #FF9800 50%, transparent 100%)",
+          transform: "rotate(-3deg)"
+        }}></div>
+        
+        {/* Location Pins */}
+        <div style={{
+          position: "absolute",
+          top: "15%",
+          left: "10%",
+          fontSize: "40px",
+          opacity: 0.4
+        }}>📍</div>
+        <div style={{
+          position: "absolute",
+          top: "25%",
+          right: "15%",
+          fontSize: "35px",
+          opacity: 0.35
+        }}>🏁</div>
+        <div style={{
+          position: "absolute",
+          bottom: "20%",
+          left: "20%",
+          fontSize: "45px",
+          opacity: 0.4
+        }}>🚗</div>
+        <div style={{
+          position: "absolute",
+          top: "50%",
+          right: "10%",
+          fontSize: "38px",
+          opacity: 0.45
+        }}>🛺</div>
+        <div style={{
+          position: "absolute",
+          bottom: "30%",
+          right: "25%",
+          fontSize: "42px",
+          opacity: 0.4
+        }}>🏍️</div>
+        
+        {/* Gradient Circles */}
+        <div style={{
+          position: "absolute",
+          top: "10%",
+          left: "5%",
+          width: "300px",
+          height: "300px",
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(76, 175, 80, 0.2) 0%, transparent 70%)",
+          filter: "blur(40px)"
+        }}></div>
+        <div style={{
+          position: "absolute",
+          bottom: "10%",
+          right: "5%",
+          width: "350px",
+          height: "350px",
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(33, 150, 243, 0.2) 0%, transparent 70%)",
+          filter: "blur(40px)"
+        }}></div>
+        
+        {/* Grid Pattern */}
+        <svg width="100%" height="100%" style={{ position: "absolute", top: 0, left: 0 }}>
+          <defs>
+            <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+              <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)" />
+        </svg>
+      </div>
 
       {/* Content */}
       <div style={{

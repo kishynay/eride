@@ -5,15 +5,15 @@ import { supabase } from "../../lib/supabase"
 export default function Admin() {
   const [bookings, setBookings] = useState([])
   const [drivers, setDrivers] = useState([])
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const fetchBookings = async () => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("bookings")
       .select("*")
-      .order("ride_date", { ascending: true })
-      .order("ride_time", { ascending: true })
+      .order("created_at", { ascending: false })
 
-    if (!error) setBookings(data)
+    if (data) setBookings(data)
   }
 
   const fetchDrivers = async () => {
@@ -34,8 +34,8 @@ export default function Admin() {
 
     const activeBookings = bookings.filter(b => b.status !== "completed")
 
-    const emergencyBookings = activeBookings.filter(b => b.ride_type === "emergency")
-    const scheduledBookings = activeBookings.filter(b => b.ride_type === "scheduled")
+    const emergencyBookings = activeBookings.filter(b => !b.ride_date && !b.ride_time)
+    const scheduledBookings = activeBookings.filter(b => b.ride_date)
 
     const todayBookings = scheduledBookings.filter(b => b.ride_date === today)
     const tomorrowBookings = scheduledBookings.filter(b => b.ride_date === tomorrow)
@@ -54,62 +54,24 @@ export default function Admin() {
   }
 
   const assignDriver = async (bookingId, driverId) => {
-    const { error } = await supabase
+    await supabase
       .from("bookings")
       .update({ driver_id: driverId, status: "assigned" })
       .eq("id", bookingId)
 
-    if (!error) {
-      fetchBookings()
-    }
+    fetchBookings()
   }
 
   useEffect(() => {
     fetchBookings()
     fetchDrivers()
 
-    // Request notification permission
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission()
-    }
-
     const interval = setInterval(() => {
-      checkNewBookings()
+      fetchBookings()
     }, 3000)
 
-    return () => {
-      clearInterval(interval)
-    }
+    return () => clearInterval(interval)
   }, [])
-
-  const checkNewBookings = async () => {
-    const { data } = await supabase
-      .from("bookings")
-      .select("*")
-      .order("ride_date", { ascending: true })
-      .order("ride_time", { ascending: true })
-
-    if (data) {
-      const newBookingsCount = data.filter(b => b.status === "pending").length
-      const oldPendingCount = bookings.filter(b => b.status === "pending").length
-
-      if (newBookingsCount > oldPendingCount) {
-        // Play sound
-        const audio = new Audio('/notification.mp3')
-        audio.play().catch(() => {})
-
-        // Show browser notification
-        if ("Notification" in window && Notification.permission === "granted") {
-          new Notification("New Booking!", {
-            body: "You have a new ride request",
-            icon: "/icon.png"
-          })
-        }
-      }
-
-      setBookings(data)
-    }
-  }
 
   const { emergencyBookings, todayBookings, tomorrowBookings, upcomingBookings } = groupBookings()
 
@@ -127,44 +89,44 @@ export default function Admin() {
         key={booking.id}
         style={{
           background: "white",
-          borderRadius: "12px",
-          padding: "20px",
-          marginBottom: "16px",
+          borderRadius: 12,
+          padding: 20,
+          marginBottom: 16,
           boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-          borderLeft: booking.ride_type === "emergency" ? "4px solid #f44336" : "4px solid #000"
+          borderLeft: `4px solid ${!booking.ride_date ? "#f44336" : "#000"}`
         }}
       >
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <span style={{
             padding: "4px 12px",
-            background: booking.ride_type === "emergency" ? "#f44336" : "#000",
+            background: !booking.ride_date ? "#f44336" : "#000",
             color: "white",
-            borderRadius: "4px",
-            fontSize: "12px",
-            fontWeight: "600"
+            borderRadius: 4,
+            fontSize: 12,
+            fontWeight: 600
           }}>
-            {booking.ride_type === "emergency" ? "🚨 EMERGENCY" : "📅 SCHEDULED"}
+            {!booking.ride_date ? "🚨 EMERGENCY" : "📅 SCHEDULED"}
           </span>
           
           <span style={{
             padding: "4px 12px",
             background: booking.status === "assigned" ? "#4CAF50" : "#FF9800",
             color: "white",
-            borderRadius: "4px",
-            fontSize: "12px",
-            fontWeight: "600"
+            borderRadius: 4,
+            fontSize: 12,
+            fontWeight: 600
           }}>
             {booking.status.toUpperCase()}
           </span>
         </div>
 
         {/* Customer Info */}
-        <div style={{ marginBottom: "16px" }}>
-          <p style={{ margin: "0 0 8px 0", fontSize: "18px", fontWeight: "600", color: "#1a1a1a" }}>
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ margin: "0 0 8px 0", fontSize: 18, fontWeight: 600, color: "#1a1a1a" }}>
             {booking.name}
           </p>
-          <p style={{ margin: "0 0 4px 0", fontSize: "15px", color: "#666" }}>
+          <p style={{ margin: "0 0 4px 0", fontSize: 15, color: "#666" }}>
             📞 {booking.phone}
           </p>
           <a href={`tel:${booking.phone}`} style={{ textDecoration: "none" }}>
@@ -173,11 +135,11 @@ export default function Admin() {
               background: "#4CAF50",
               color: "white",
               border: "none",
-              borderRadius: "6px",
-              fontSize: "13px",
-              fontWeight: "600",
+              borderRadius: 6,
+              fontSize: 13,
+              fontWeight: 600,
               cursor: "pointer",
-              marginTop: "8px"
+              marginTop: 8
             }}>
               Call Customer
             </button>
@@ -187,19 +149,27 @@ export default function Admin() {
         {/* Trip Details */}
         <div style={{
           background: "#f8f9fa",
-          borderRadius: "8px",
-          padding: "12px",
-          marginBottom: "16px"
+          borderRadius: 8,
+          padding: 12,
+          marginBottom: 16
         }}>
-          <p style={{ margin: "0 0 8px 0", fontSize: "14px", color: "#666" }}>
+          <p style={{ margin: "0 0 8px 0", fontSize: 14, color: "#666" }}>
+            <strong style={{ color: "#1a1a1a" }}>Vehicle:</strong> {booking.vehicle_type || "Not specified"}
+          </p>
+          <p style={{ margin: "0 0 8px 0", fontSize: 14, color: "#666" }}>
             <strong style={{ color: "#1a1a1a" }}>Pickup:</strong> {booking.pickup}
           </p>
-          <p style={{ margin: "0 0 8px 0", fontSize: "14px", color: "#666" }}>
+          <p style={{ margin: "0 0 8px 0", fontSize: 14, color: "#666" }}>
             <strong style={{ color: "#1a1a1a" }}>Destination:</strong> {booking.destination}
           </p>
-          {booking.ride_type === "scheduled" && (
-            <p style={{ margin: 0, fontSize: "14px", color: "#666" }}>
+          {booking.ride_date && (
+            <p style={{ margin: "0 0 8px 0", fontSize: 14, color: "#666" }}>
               <strong style={{ color: "#1a1a1a" }}>Time:</strong> {booking.ride_date} at {booking.ride_time}
+            </p>
+          )}
+          {booking.notes && (
+            <p style={{ margin: 0, fontSize: 14, color: "#666" }}>
+              <strong style={{ color: "#1a1a1a" }}>Notes:</strong> {booking.notes}
             </p>
           )}
           {booking.pickup_lat && booking.pickup_lng && (
@@ -214,11 +184,11 @@ export default function Admin() {
                 background: "#4285F4",
                 color: "white",
                 border: "none",
-                borderRadius: "6px",
-                fontSize: "13px",
-                fontWeight: "600",
+                borderRadius: 6,
+                fontSize: 13,
+                fontWeight: 600,
                 cursor: "pointer",
-                marginTop: "8px"
+                marginTop: 8
               }}>
                 📍 View on Map
               </button>
@@ -230,17 +200,17 @@ export default function Admin() {
         {assignedDriver && (
           <div style={{
             background: "#e3f2fd",
-            borderRadius: "8px",
-            padding: "12px",
-            marginBottom: "16px"
+            borderRadius: 8,
+            padding: 12,
+            marginBottom: 16
           }}>
-            <p style={{ margin: "0 0 4px 0", fontSize: "14px", fontWeight: "600", color: "#1a1a1a" }}>
+            <p style={{ margin: "0 0 4px 0", fontSize: 14, fontWeight: 600, color: "#1a1a1a" }}>
               Driver: {assignedDriver.name}
             </p>
-            <p style={{ margin: "0 0 4px 0", fontSize: "13px", color: "#666" }}>
+            <p style={{ margin: "0 0 4px 0", fontSize: 13, color: "#666" }}>
               Vehicle: {assignedDriver.vehicle_type}
             </p>
-            <p style={{ margin: "0 0 8px 0", fontSize: "13px", color: "#666" }}>
+            <p style={{ margin: "0 0 8px 0", fontSize: 13, color: "#666" }}>
               📞 {assignedDriver.phone}
             </p>
             <a href={`tel:${assignedDriver.phone}`} style={{ textDecoration: "none" }}>
@@ -249,9 +219,9 @@ export default function Admin() {
                 background: "#2196F3",
                 color: "white",
                 border: "none",
-                borderRadius: "6px",
-                fontSize: "13px",
-                fontWeight: "600",
+                borderRadius: 6,
+                fontSize: 13,
+                fontWeight: 600,
                 cursor: "pointer"
               }}>
                 Call Driver
@@ -261,16 +231,16 @@ export default function Admin() {
         )}
 
         {/* Actions */}
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <select
             value={booking.driver_id || ""}
             onChange={(e) => assignDriver(booking.id, e.target.value)}
             style={{
               flex: "1 1 200px",
-              padding: "10px",
+              padding: 10,
               border: "1px solid #e0e0e0",
-              borderRadius: "8px",
-              fontSize: "14px",
+              borderRadius: 8,
+              fontSize: 14,
               background: "white"
             }}
           >
@@ -289,9 +259,9 @@ export default function Admin() {
               background: "#000",
               color: "white",
               border: "none",
-              borderRadius: "8px",
-              fontSize: "14px",
-              fontWeight: "600",
+              borderRadius: 8,
+              fontSize: 14,
+              fontWeight: 600,
               cursor: "pointer"
             }}
           >
@@ -306,109 +276,153 @@ export default function Admin() {
     <div style={{
       minHeight: "100vh",
       background: "#f8f9fa",
-      paddingBottom: "20px"
+      paddingBottom: 20
     }}>
       {/* Header */}
       <div style={{
-        background: "white",
-        padding: "20px",
+        background: "#000",
+        padding: 20,
         boxShadow: "0 2px 4px rgba(0,0,0,0.08)",
-        marginBottom: "20px"
+        marginBottom: 20
       }}>
-        <h1 style={{
-          fontSize: "24px",
-          fontWeight: "600",
-          color: "#1a1a1a",
-          margin: "0 0 5px 0"
-        }}>
-          Admin Panel
-        </h1>
-        <p style={{
-          fontSize: "14px",
-          color: "#666",
-          margin: "0 0 15px 0"
-        }}>
-          Manage bookings and drivers
-        </p>
-        
-        {/* Navigation */}
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <a href="/admin" style={{ textDecoration: "none" }}>
-            <button style={{
-              padding: "8px 16px",
-              background: "#000",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
-              fontSize: "14px",
-              fontWeight: "600",
-              cursor: "pointer"
-            }}>
-              Bookings
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <h1 style={{
+                color: "#fff",
+                fontSize: 20,
+                fontWeight: 700,
+                margin: "0 0 5px 0"
+              }}>
+                Admin Panel
+              </h1>
+              <p style={{
+                color: "rgba(255,255,255,0.7)",
+                fontSize: 14,
+                margin: 0
+              }}>
+                Manage bookings and drivers
+              </p>
+            </div>
+            
+            {/* Menu Button */}
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              style={{
+                background: "rgba(255,255,255,0.1)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                borderRadius: 8,
+                padding: "10px 12px",
+                cursor: "pointer",
+                display: "flex",
+                flexDirection: "column",
+                gap: 4
+              }}
+            >
+              <div style={{ width: 24, height: 2, background: "white", borderRadius: 2 }}></div>
+              <div style={{ width: 24, height: 2, background: "white", borderRadius: 2 }}></div>
+              <div style={{ width: 24, height: 2, background: "white", borderRadius: 2 }}></div>
             </button>
-          </a>
-          <a href="/analytics" style={{ textDecoration: "none" }}>
-            <button style={{
-              padding: "8px 16px",
+          </div>
+          
+          {/* Dropdown Menu */}
+          {menuOpen && (
+            <div style={{
+              position: "absolute",
+              right: 16,
+              top: 80,
               background: "white",
-              color: "#666",
-              border: "1px solid #e0e0e0",
-              borderRadius: "6px",
-              fontSize: "14px",
-              fontWeight: "600",
-              cursor: "pointer"
+              borderRadius: 12,
+              boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+              minWidth: 200,
+              zIndex: 100,
+              overflow: "hidden"
             }}>
-              Analytics
-            </button>
-          </a>
-          <a href="/earnings" style={{ textDecoration: "none" }}>
-            <button style={{
-              padding: "8px 16px",
-              background: "white",
-              color: "#666",
-              border: "1px solid #e0e0e0",
-              borderRadius: "6px",
-              fontSize: "14px",
-              fontWeight: "600",
-              cursor: "pointer"
-            }}>
-              Earnings
-            </button>
-          </a>
-          <a href="/history" style={{ textDecoration: "none" }}>
-            <button style={{
-              padding: "8px 16px",
-              background: "white",
-              color: "#666",
-              border: "1px solid #e0e0e0",
-              borderRadius: "6px",
-              fontSize: "14px",
-              fontWeight: "600",
-              cursor: "pointer"
-            }}>
-              History
-            </button>
-          </a>
+              <a href="/admin" style={{ textDecoration: "none" }}>
+                <div style={{
+                  padding: "14px 20px",
+                  color: "#1a1a1a",
+                  fontSize: 15,
+                  fontWeight: 600,
+                  borderBottom: "1px solid #f0f0f0",
+                  cursor: "pointer",
+                  background: "white"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "#f8f9fa"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "white"}
+                >
+                  📋 Bookings
+                </div>
+              </a>
+              <a href="/analytics" style={{ textDecoration: "none" }}>
+                <div style={{
+                  padding: "14px 20px",
+                  color: "#1a1a1a",
+                  fontSize: 15,
+                  fontWeight: 600,
+                  borderBottom: "1px solid #f0f0f0",
+                  cursor: "pointer",
+                  background: "white"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "#f8f9fa"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "white"}
+                >
+                  📊 Analytics Dashboard
+                </div>
+              </a>
+              <a href="/earnings" style={{ textDecoration: "none" }}>
+                <div style={{
+                  padding: "14px 20px",
+                  color: "#1a1a1a",
+                  fontSize: 15,
+                  fontWeight: 600,
+                  borderBottom: "1px solid #f0f0f0",
+                  cursor: "pointer",
+                  background: "white"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "#f8f9fa"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "white"}
+                >
+                  💰 Driver Earnings
+                </div>
+              </a>
+              <a href="/history" style={{ textDecoration: "none" }}>
+                <div style={{
+                  padding: "14px 20px",
+                  color: "#1a1a1a",
+                  fontSize: 15,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  background: "white"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "#f8f9fa"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "white"}
+                >
+                  📜 Booking History
+                </div>
+              </a>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Content */}
       <div style={{
-        maxWidth: "1200px",
+        maxWidth: 1200,
         margin: "0 auto",
         padding: "0 16px"
       }}>
         {/* Emergency Section */}
         {emergencyBookings.length > 0 && (
-          <div style={{ marginBottom: "30px" }}>
+          <div style={{ marginBottom: 30 }}>
             <h2 style={{
-              fontSize: "18px",
-              fontWeight: "600",
+              fontSize: 18,
+              fontWeight: 600,
               color: "#f44336",
-              marginBottom: "16px",
+              marginBottom: 16,
               display: "flex",
               alignItems: "center",
-              gap: "8px"
+              gap: 8
             }}>
               🚨 EMERGENCY ({emergencyBookings.length})
             </h2>
@@ -417,51 +431,51 @@ export default function Admin() {
         )}
 
         {/* Today Section */}
-        <div style={{ marginBottom: "30px" }}>
+        <div style={{ marginBottom: 30 }}>
           <h2 style={{
-            fontSize: "18px",
-            fontWeight: "600",
+            fontSize: 18,
+            fontWeight: 600,
             color: "#1a1a1a",
-            marginBottom: "16px"
+            marginBottom: 16
           }}>
             TODAY ({todayBookings.length})
           </h2>
           {todayBookings.length === 0 ? (
-            <p style={{ color: "#999", fontSize: "14px" }}>No bookings for today</p>
+            <p style={{ color: "#999", fontSize: 14 }}>No bookings for today</p>
           ) : (
             todayBookings.map(renderBooking)
           )}
         </div>
 
         {/* Tomorrow Section */}
-        <div style={{ marginBottom: "30px" }}>
+        <div style={{ marginBottom: 30 }}>
           <h2 style={{
-            fontSize: "18px",
-            fontWeight: "600",
+            fontSize: 18,
+            fontWeight: 600,
             color: "#1a1a1a",
-            marginBottom: "16px"
+            marginBottom: 16
           }}>
             TOMORROW ({tomorrowBookings.length})
           </h2>
           {tomorrowBookings.length === 0 ? (
-            <p style={{ color: "#999", fontSize: "14px" }}>No bookings for tomorrow</p>
+            <p style={{ color: "#999", fontSize: 14 }}>No bookings for tomorrow</p>
           ) : (
             tomorrowBookings.map(renderBooking)
           )}
         </div>
 
         {/* Upcoming Section */}
-        <div style={{ marginBottom: "30px" }}>
+        <div style={{ marginBottom: 30 }}>
           <h2 style={{
-            fontSize: "18px",
-            fontWeight: "600",
+            fontSize: 18,
+            fontWeight: 600,
             color: "#1a1a1a",
-            marginBottom: "16px"
+            marginBottom: 16
           }}>
             UPCOMING ({upcomingBookings.length})
           </h2>
           {upcomingBookings.length === 0 ? (
-            <p style={{ color: "#999", fontSize: "14px" }}>No upcoming bookings</p>
+            <p style={{ color: "#999", fontSize: 14 }}>No upcoming bookings</p>
           ) : (
             upcomingBookings.map(renderBooking)
           )}

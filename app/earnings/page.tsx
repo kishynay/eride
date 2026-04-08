@@ -6,6 +6,7 @@ export default function EarningsPage() {
   const [drivers, setDrivers] = useState([])
   const [selectedDriver, setSelectedDriver] = useState(null)
   const [rides, setRides] = useState([])
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     fetchDrivers()
@@ -47,26 +48,130 @@ export default function EarningsPage() {
     }}>
       {/* Header */}
       <div style={{
-        background: "white",
+        background: "#000",
         padding: "20px",
         boxShadow: "0 2px 4px rgba(0,0,0,0.08)",
         marginBottom: "20px"
       }}>
-        <h1 style={{
-          fontSize: "24px",
-          fontWeight: "600",
-          color: "#1a1a1a",
-          margin: "0 0 5px 0"
-        }}>
-          Driver Earnings
-        </h1>
-        <p style={{
-          fontSize: "14px",
-          color: "#666",
-          margin: 0
-        }}>
-          Track driver performance and earnings
-        </p>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <h1 style={{
+                color: "#fff",
+                fontSize: 20,
+                fontWeight: 700,
+                margin: "0 0 5px 0"
+              }}>
+                Driver Earnings
+              </h1>
+              <p style={{
+                color: "rgba(255,255,255,0.7)",
+                fontSize: 14,
+                margin: 0
+              }}>
+                Track driver performance and earnings
+              </p>
+            </div>
+            
+            {/* Menu Button */}
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              style={{
+                background: "rgba(255,255,255,0.1)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                borderRadius: 8,
+                padding: "10px 12px",
+                cursor: "pointer",
+                display: "flex",
+                flexDirection: "column",
+                gap: 4
+              }}
+            >
+              <div style={{ width: 24, height: 2, background: "white", borderRadius: 2 }}></div>
+              <div style={{ width: 24, height: 2, background: "white", borderRadius: 2 }}></div>
+              <div style={{ width: 24, height: 2, background: "white", borderRadius: 2 }}></div>
+            </button>
+          </div>
+          
+          {/* Dropdown Menu */}
+          {menuOpen && (
+            <div style={{
+              position: "absolute",
+              right: 16,
+              top: 80,
+              background: "white",
+              borderRadius: 12,
+              boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+              minWidth: 200,
+              zIndex: 100,
+              overflow: "hidden"
+            }}>
+              <a href="/admin" style={{ textDecoration: "none" }}>
+                <div style={{
+                  padding: "14px 20px",
+                  color: "#1a1a1a",
+                  fontSize: 15,
+                  fontWeight: 600,
+                  borderBottom: "1px solid #f0f0f0",
+                  cursor: "pointer",
+                  background: "white"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "#f8f9fa"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "white"}
+                >
+                  📋 Bookings
+                </div>
+              </a>
+              <a href="/analytics" style={{ textDecoration: "none" }}>
+                <div style={{
+                  padding: "14px 20px",
+                  color: "#1a1a1a",
+                  fontSize: 15,
+                  fontWeight: 600,
+                  borderBottom: "1px solid #f0f0f0",
+                  cursor: "pointer",
+                  background: "white"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "#f8f9fa"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "white"}
+                >
+                  📊 Analytics Dashboard
+                </div>
+              </a>
+              <a href="/earnings" style={{ textDecoration: "none" }}>
+                <div style={{
+                  padding: "14px 20px",
+                  color: "#1a1a1a",
+                  fontSize: 15,
+                  fontWeight: 600,
+                  borderBottom: "1px solid #f0f0f0",
+                  cursor: "pointer",
+                  background: "white"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "#f8f9fa"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "white"}
+                >
+                  💰 Driver Earnings
+                </div>
+              </a>
+              <a href="/history" style={{ textDecoration: "none" }}>
+                <div style={{
+                  padding: "14px 20px",
+                  color: "#1a1a1a",
+                  fontSize: 15,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  background: "white"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "#f8f9fa"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "white"}
+                >
+                  📜 Booking History
+                </div>
+              </a>
+            </div>
+          )}
+        </div>
       </div>
 
       <div style={{
