@@ -1,65 +1,183 @@
-import Image from "next/image";
+"use client"
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div style={{
+      minHeight: "100vh",
+      background: "#000",
+      position: "relative",
+      overflow: "hidden"
+    }}>
+      {/* Background Pattern */}
+      <div style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: "radial-gradient(circle at 20% 50%, rgba(76, 175, 80, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(33, 150, 243, 0.1) 0%, transparent 50%)",
+        zIndex: 0
+      }}></div>
+
+      {/* Content */}
+      <div style={{
+        position: "relative",
+        zIndex: 1,
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        padding: "40px 20px"
+      }}>
+        {/* Top Section */}
+        <div style={{ textAlign: "center", paddingTop: "60px" }}>
+          <h1 style={{
+            fontSize: "48px",
+            fontWeight: "700",
+            color: "white",
+            margin: "0 0 16px 0",
+            letterSpacing: "-1px"
+          }}>
+            Ride
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p style={{
+            fontSize: "18px",
+            color: "rgba(255,255,255,0.7)",
+            margin: 0,
+            fontWeight: "300"
+          }}>
+            Your journey, simplified
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
+
+        {/* Center Cards */}
+        <div style={{
+          maxWidth: "400px",
+          width: "100%",
+          margin: "0 auto",
+          display: "flex",
+          flexDirection: "column",
+          gap: "16px"
+        }}>
+          {/* Rider Card */}
+          <a href="/rider" style={{ textDecoration: "none" }}>
+            <div style={{
+              background: "white",
+              borderRadius: "16px",
+              padding: "24px",
+              cursor: "pointer",
+              transition: "transform 0.2s",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.3)"
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-4px)"}
+            onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                <div style={{
+                  width: "56px",
+                  height: "56px",
+                  background: "linear-gradient(135deg, #4CAF50 0%, #45a049 100%)",
+                  borderRadius: "12px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "28px"
+                }}>
+                  🚗
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h2 style={{
+                    fontSize: "20px",
+                    fontWeight: "600",
+                    color: "#1a1a1a",
+                    margin: "0 0 4px 0"
+                  }}>
+                    Book a Ride
+                  </h2>
+                  <p style={{
+                    fontSize: "14px",
+                    color: "#666",
+                    margin: 0
+                  }}>
+                    Quick and reliable rides
+                  </p>
+                </div>
+                <div style={{
+                  fontSize: "24px",
+                  color: "#ccc"
+                }}>
+                  →
+                </div>
+              </div>
+            </div>
           </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
+
+          {/* Driver Card */}
+          <a href="/driver" style={{ textDecoration: "none" }}>
+            <div style={{
+              background: "white",
+              borderRadius: "16px",
+              padding: "24px",
+              cursor: "pointer",
+              transition: "transform 0.2s",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.3)"
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-4px)"}
+            onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                <div style={{
+                  width: "56px",
+                  height: "56px",
+                  background: "linear-gradient(135deg, #2196F3 0%, #1976D2 100%)",
+                  borderRadius: "12px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "28px"
+                }}>
+                  🧑‍✈️
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h2 style={{
+                    fontSize: "20px",
+                    fontWeight: "600",
+                    color: "#1a1a1a",
+                    margin: "0 0 4px 0"
+                  }}>
+                    Drive with Us
+                  </h2>
+                  <p style={{
+                    fontSize: "14px",
+                    color: "#666",
+                    margin: 0
+                  }}>
+                    Earn on your schedule
+                  </p>
+                </div>
+                <div style={{
+                  fontSize: "24px",
+                  color: "#ccc"
+                }}>
+                  →
+                </div>
+              </div>
+            </div>
           </a>
         </div>
-      </main>
+
+        {/* Bottom Section */}
+        <div style={{ textAlign: "center" }}>
+          <a href="/admin" style={{
+            color: "rgba(255,255,255,0.5)",
+            fontSize: "14px",
+            textDecoration: "none",
+            fontWeight: "300"
+          }}>
+            Admin Access
+          </a>
+        </div>
+      </div>
     </div>
-  );
+  )
 }
