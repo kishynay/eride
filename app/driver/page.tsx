@@ -6,8 +6,11 @@ import { supabase } from "../../lib/supabase"
 interface DriverForm {
   name: string
   phone: string
-  vehicle_type: string
   area: string
+  vehicle_type: string
+  vehicle_number: string
+  experience: string
+  preferred_routes: string
 }
 
 interface Ride {
@@ -20,8 +23,6 @@ interface Ride {
   ride_date: string
   ride_time: string
   notes: string
-  pickup_lat: number | null
-  pickup_lng: number | null
   status: string
 }
 
@@ -35,13 +36,18 @@ const VEHICLES = [
   { id: "tempo",      label: "Tempo",      icon: "🚜" },
 ]
 
-const STEPS = ["Your Details", "Vehicle Type", "Confirm"]
+const STEPS = ["Your Details", "Vehicle Info", "Confirm"]
+
+const INIT: DriverForm = {
+  name: "", phone: "", area: "",
+  vehicle_type: "", vehicle_number: "", experience: "", preferred_routes: ""
+}
 
 export default function DriverPage() {
   const [driverId, setDriverId] = useState<string | null>(null)
   const [rides, setRides] = useState<Ride[]>([])
   const [step, setStep] = useState(1)
-  const [form, setForm] = useState<DriverForm>({ name: "", phone: "", vehicle_type: "", area: "" })
+  const [form, setForm] = useState<DriverForm>(INIT)
   const [lat, setLat] = useState<number | null>(null)
   const [lng, setLng] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
@@ -54,16 +60,22 @@ export default function DriverPage() {
       setLng(pos.coords.longitude)
     })
     const saved = localStorage.getItem("driver_id")
-    if (saved) {
-      verifyDriver(saved)
-    }
+    if (saved) verifyDriver(saved)
   }, [])
 
   useEffect(() => {
     if (!driverId) return
     fetchRides()
-    const interval = setInterval(fetchRides, 3000)
-    return () => clearInterval(interval)
+    const channel = supabase
+      .channel(`driver-rides-${driverId}`)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "bookings",
+        filter: `driver_id=eq.${driverId}`,
+      }, fetchRides)
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
   }, [driverId])
 
   const verifyDriver = async (id: string) => {
@@ -88,7 +100,17 @@ export default function DriverPage() {
     try {
       const { data, error: dbError } = await supabase
         .from("drivers")
-        .insert([{ name: form.name, phone: form.phone, vehicle_type: form.vehicle_type, area: form.area, lat, lng }])
+        .insert([{
+          name: form.name,
+          phone: form.phone,
+          area: form.area,
+          vehicle_type: form.vehicle_type,
+          vehicle_number: form.vehicle_number,
+          experience: form.experience,
+          preferred_routes: form.preferred_routes || null,
+          lat,
+          lng,
+        }])
         .select()
       if (dbError) throw new Error(dbError.message)
       localStorage.setItem("driver_id", data![0].id)
@@ -106,15 +128,18 @@ export default function DriverPage() {
     fetchRides()
   }
 
+  const set = (k: keyof DriverForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm(f => ({ ...f, [k]: e.target.value }))
+
   const canNext = () => {
-    if (step === 1) return form.name.trim() && form.phone.trim() && form.area.trim()
-    if (step === 2) return !!form.vehicle_type
+    if (step === 1) return !!(form.name.trim() && form.phone.trim() && form.area.trim())
+    if (step === 2) return !!(form.vehicle_type && form.vehicle_number.trim() && form.experience.trim())
     return true
   }
 
   const vehicle = VEHICLES.find(v => v.id === form.vehicle_type)
 
-  // ── Registration success screen ──
+  // ── Success screen ──
   if (registered) {
     return (
       <div style={{ minHeight: "100vh", background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" }}>
@@ -122,12 +147,9 @@ export default function DriverPage() {
         <h1 style={{ fontSize: 26, fontWeight: 800, margin: "0 0 12px" }}>You're registered!</h1>
         <p style={{ fontSize: 15, color: "#555", margin: "0 0 8px" }}>Welcome to eRide, <strong>{form.name}</strong>.</p>
         <p style={{ fontSize: 14, color: "#888", margin: "0 0 32px" }}>
-          {vehicle?.icon} {vehicle?.label} · {form.area}
+          {vehicle?.icon} {vehicle?.label} · {form.vehicle_number} · {form.area}
         </p>
-        <div style={{
-          background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12,
-          padding: "16px 20px", marginBottom: 32, maxWidth: 320, width: "100%"
-        }}>
+        <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, padding: "16px 20px", marginBottom: 32, maxWidth: 320, width: "100%" }}>
           <p style={{ margin: 0, fontSize: 14, color: "#166534" }}>
             ✅ Our team will review your profile and assign rides soon. Keep this page bookmarked.
           </p>
@@ -146,18 +168,13 @@ export default function DriverPage() {
   if (!driverId) {
     return (
       <div style={{ minHeight: "100vh", background: "#f8f9fa", paddingBottom: 100 }}>
-        {/* Header */}
         <div style={{ background: "#000", padding: "20px 20px 16px", position: "sticky", top: 0, zIndex: 10 }}>
           <div style={{ maxWidth: 500, margin: "0 auto" }}>
-            <h1 style={{ color: "#fff", fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>🧑✈️ Driver Registration</h1>
-            {/* Step bar */}
+            <h1 style={{ color: "#fff", fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>🧑‍✈️ Driver Registration</h1>
             <div style={{ display: "flex", gap: 6 }}>
               {STEPS.map((label, i) => (
                 <div key={label} style={{ flex: 1 }}>
-                  <div style={{
-                    height: 4, borderRadius: 2,
-                    background: i + 1 <= step ? "#4CAF50" : "rgba(255,255,255,0.2)"
-                  }} />
+                  <div style={{ height: 4, borderRadius: 2, background: i + 1 <= step ? "#4CAF50" : "rgba(255,255,255,0.2)" }} />
                   <p style={{ color: i + 1 <= step ? "#4CAF50" : "rgba(255,255,255,0.4)", fontSize: 10, margin: "4px 0 0", fontWeight: 600 }}>
                     {label}
                   </p>
@@ -170,38 +187,34 @@ export default function DriverPage() {
         <div style={{ maxWidth: 500, margin: "20px auto", padding: "0 16px" }}>
           <div style={{ background: "#fff", borderRadius: 14, padding: "22px 20px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
 
-            {/* Step 1 — Details */}
             {step === 1 && (
               <>
                 <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>Your Details</h2>
                 <p style={{ fontSize: 13, color: "#888", margin: "0 0 20px" }}>Basic info to get you started</p>
 
                 <label style={s.label}>Full Name</label>
-                <input style={s.input} placeholder="Enter your name" value={form.name}
-                  onChange={e => setForm({ ...form, name: e.target.value })} />
+                <input style={s.input} placeholder="Enter your name" value={form.name} onChange={set("name")} />
 
                 <label style={{ ...s.label, marginTop: 16 }}>Phone Number</label>
-                <input style={s.input} type="tel" placeholder="+91 XXXXX XXXXX" value={form.phone}
-                  onChange={e => setForm({ ...form, phone: e.target.value })} />
+                <input style={s.input} type="tel" placeholder="+91 XXXXX XXXXX" value={form.phone} onChange={set("phone")} />
 
                 <label style={{ ...s.label, marginTop: 16 }}>Operating Area</label>
-                <input style={s.input} placeholder="e.g. Hyderabad, Banjara Hills" value={form.area}
-                  onChange={e => setForm({ ...form, area: e.target.value })} />
+                <input style={s.input} placeholder="e.g. Hyderabad, Banjara Hills" value={form.area} onChange={set("area")} />
 
                 {lat && <p style={{ fontSize: 12, color: "#16a34a", margin: "10px 0 0" }}>✓ GPS location captured</p>}
               </>
             )}
 
-            {/* Step 2 — Vehicle */}
             {step === 2 && (
               <>
-                <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>Vehicle Type</h2>
-                <p style={{ fontSize: 13, color: "#888", margin: "0 0 20px" }}>What do you drive?</p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>Vehicle Info</h2>
+                <p style={{ fontSize: 13, color: "#888", margin: "0 0 16px" }}>Tell us about your vehicle</p>
+
+                <label style={s.label}>Vehicle Type</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
                   {VEHICLES.map(v => (
-                    <button key={v.id} onClick={() => setForm({ ...form, vehicle_type: v.id })} style={{
-                      display: "flex", alignItems: "center", gap: 12,
-                      padding: "12px 14px",
+                    <button key={v.id} onClick={() => setForm(f => ({ ...f, vehicle_type: v.id }))} style={{
+                      display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
                       background: form.vehicle_type === v.id ? "#000" : "#fff",
                       color: form.vehicle_type === v.id ? "#fff" : "#1a1a1a",
                       border: `2px solid ${form.vehicle_type === v.id ? "#000" : "#e8e8e8"}`,
@@ -211,10 +224,18 @@ export default function DriverPage() {
                     </button>
                   ))}
                 </div>
+
+                <label style={s.label}>Vehicle Number</label>
+                <input style={s.input} placeholder="e.g. TS 09 AB 1234" value={form.vehicle_number} onChange={set("vehicle_number")} />
+
+                <label style={{ ...s.label, marginTop: 16 }}>Years of Experience</label>
+                <input style={s.input} placeholder="e.g. 3 years" value={form.experience} onChange={set("experience")} />
+
+                <label style={{ ...s.label, marginTop: 16 }}>Preferred Routes <span style={{ fontWeight: 400, color: "#aaa" }}>(optional)</span></label>
+                <input style={s.input} placeholder="e.g. Hyderabad–Vijayawada" value={form.preferred_routes} onChange={set("preferred_routes")} />
               </>
             )}
 
-            {/* Step 3 — Confirm */}
             {step === 3 && (
               <>
                 <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>Confirm Details</h2>
@@ -222,12 +243,15 @@ export default function DriverPage() {
                 {[
                   { label: "Name", value: form.name },
                   { label: "Phone", value: form.phone },
-                  { label: "Vehicle", value: `${vehicle?.icon} ${vehicle?.label}` },
                   { label: "Area", value: form.area },
+                  { label: "Vehicle", value: `${vehicle?.icon} ${vehicle?.label}` },
+                  { label: "Vehicle No.", value: form.vehicle_number },
+                  { label: "Experience", value: form.experience },
+                  ...(form.preferred_routes ? [{ label: "Routes", value: form.preferred_routes }] : []),
                 ].map(row => (
                   <div key={row.label} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #f0f0f0" }}>
                     <span style={{ fontSize: 14, color: "#888" }}>{row.label}</span>
-                    <span style={{ fontSize: 14, fontWeight: 600 }}>{row.value}</span>
+                    <span style={{ fontSize: 14, fontWeight: 600, textAlign: "right", maxWidth: "60%" }}>{row.value}</span>
                   </div>
                 ))}
                 {error && (
@@ -240,26 +264,22 @@ export default function DriverPage() {
           </div>
         </div>
 
-        {/* Bottom nav */}
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#fff", padding: "12px 16px", boxShadow: "0 -2px 12px rgba(0,0,0,0.08)" }}>
           <div style={{ maxWidth: 500, margin: "0 auto", display: "flex", gap: 10 }}>
             {step > 1 && (
-              <button onClick={() => setStep(step - 1)} style={{
-                flex: 1, padding: 14, background: "#f0f0f0", color: "#333",
-                border: "none", borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: "pointer"
-              }}>← Back</button>
+              <button onClick={() => setStep(n => n - 1)} style={{ flex: 1, padding: 14, background: "#f0f0f0", color: "#333", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
+                ← Back
+              </button>
             )}
             {step < 3 ? (
-              <button onClick={() => setStep(step + 1)} disabled={!canNext()} style={{
-                flex: 2, padding: 14,
-                background: canNext() ? "#000" : "#ccc",
+              <button onClick={() => setStep(n => n + 1)} disabled={!canNext()} style={{
+                flex: 2, padding: 14, background: canNext() ? "#000" : "#ccc",
                 color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700,
                 cursor: canNext() ? "pointer" : "not-allowed"
               }}>Continue →</button>
             ) : (
               <button onClick={handleRegister} disabled={loading} style={{
-                flex: 2, padding: 14,
-                background: loading ? "#ccc" : "#4CAF50",
+                flex: 2, padding: 14, background: loading ? "#ccc" : "#4CAF50",
                 color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700,
                 cursor: loading ? "not-allowed" : "pointer"
               }}>{loading ? "Registering..." : "✓ Submit Registration"}</button>
@@ -275,7 +295,7 @@ export default function DriverPage() {
     <div style={{ minHeight: "100vh", background: "#f8f9fa", paddingBottom: 20 }}>
       <div style={{ background: "#000", padding: "20px", marginBottom: 20 }}>
         <div style={{ maxWidth: 800, margin: "0 auto" }}>
-          <h1 style={{ color: "#fff", fontSize: 20, fontWeight: 700, margin: "0 0 4px" }}>🧑✈️ Driver Dashboard</h1>
+          <h1 style={{ color: "#fff", fontSize: 20, fontWeight: 700, margin: "0 0 4px" }}>🧑‍✈️ Driver Dashboard</h1>
           <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, margin: 0 }}>
             {rides.length} active ride{rides.length !== 1 ? "s" : ""}
           </p>
@@ -288,7 +308,6 @@ export default function DriverPage() {
             <p style={{ fontSize: 16, color: "#999", margin: 0 }}>No assigned rides yet</p>
           </div>
         )}
-
         {rides.map(ride => {
           const v = VEHICLES.find(x => x.id === ride.vehicle_type)
           return (

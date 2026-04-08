@@ -1,6 +1,10 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { supabase } from "../../lib/supabase"
+
+declare global {
+  interface Window { google: any }
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -107,11 +111,53 @@ function StepWhen({ form, onChange }: { form: FormData; onChange: (f: Partial<Fo
   )
 }
 
+function usePlacesAutocomplete(
+  ref: React.RefObject<HTMLInputElement | null>,
+  onSelect: (address: string) => void
+) {
+  useEffect(() => {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+    if (!apiKey || !ref.current) return
+
+    const init = () => {
+      if (!window.google?.maps?.places) return
+      const ac = new window.google.maps.places.Autocomplete(ref.current!, {
+        types: ["geocode"],
+        componentRestrictions: { country: "in" },
+      })
+      ac.addListener("place_changed", () => {
+        const place = ac.getPlace()
+        if (place.formatted_address) onSelect(place.formatted_address)
+      })
+    }
+
+    if (window.google?.maps?.places) {
+      init()
+    } else if (!document.getElementById("gplaces-script")) {
+      const script = document.createElement("script")
+      script.id = "gplaces-script"
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
+      script.async = true
+      script.onload = init
+      document.head.appendChild(script)
+    } else {
+      // Script already loading — wait for it
+      document.getElementById("gplaces-script")!.addEventListener("load", init)
+    }
+  }, [ref, onSelect])
+}
+
 function StepWhere({ form, onChange, location }: {
   form: FormData
   onChange: (f: Partial<FormData>) => void
   location: LocationCoords
 }) {
+  const pickupRef = useRef<HTMLInputElement>(null)
+  const destRef = useRef<HTMLInputElement>(null)
+
+  usePlacesAutocomplete(pickupRef, addr => onChange({ pickup: addr }))
+  usePlacesAutocomplete(destRef,   addr => onChange({ destination: addr }))
+
   return (
     <div>
       <p style={styles.stepSubtitle}>Where are you going?</p>
@@ -122,7 +168,6 @@ function StepWhere({ form, onChange, location }: {
         placeholder="Full name"
         value={form.name}
         onChange={e => onChange({ name: e.target.value })}
-        required
         style={styles.input}
       />
 
@@ -132,7 +177,6 @@ function StepWhere({ form, onChange, location }: {
         placeholder="+91 XXXXX XXXXX"
         value={form.phone}
         onChange={e => onChange({ phone: e.target.value })}
-        required
         style={styles.input}
       />
 
@@ -140,27 +184,25 @@ function StepWhere({ form, onChange, location }: {
       <div style={{ position: "relative" }}>
         <span style={styles.inputIcon}>📍</span>
         <input
+          ref={pickupRef}
           type="text"
           placeholder="Enter pickup address"
-          value={form.pickup}
+          defaultValue={form.pickup}
           onChange={e => onChange({ pickup: e.target.value })}
-          required
           style={{ ...styles.input, paddingLeft: 42 }}
         />
       </div>
-      {location.lat && (
-        <p style={styles.locationBadge}>✓ GPS location captured</p>
-      )}
+      {location.lat && <p style={styles.locationBadge}>✓ GPS location captured</p>}
 
       <label style={{ ...styles.label, marginTop: 16 }}>Destination</label>
       <div style={{ position: "relative" }}>
         <span style={styles.inputIcon}>🏁</span>
         <input
+          ref={destRef}
           type="text"
           placeholder="Enter drop address"
-          value={form.destination}
+          defaultValue={form.destination}
           onChange={e => onChange({ destination: e.target.value })}
-          required
           style={{ ...styles.input, paddingLeft: 42 }}
         />
       </div>
