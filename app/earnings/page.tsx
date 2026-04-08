@@ -3,9 +3,9 @@ import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
 
 export default function EarningsPage() {
-  const [drivers, setDrivers] = useState([])
-  const [selectedDriver, setSelectedDriver] = useState(null)
-  const [rides, setRides] = useState([])
+  const [drivers, setDrivers] = useState<any[]>([])
+  const [selectedDriver, setSelectedDriver] = useState<string | null>(null)
+  const [rides, setRides] = useState<any[]>([])
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export default function EarningsPage() {
     if (data) setDrivers(data)
   }
 
-  const fetchDriverRides = async (driverId) => {
+  const fetchDriverRides = async (driverId: string) => {
     const { data } = await supabase
       .from("bookings")
       .select("*")

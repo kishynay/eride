@@ -12,8 +12,8 @@ export default function AnalyticsPage() {
     activeDrivers: 0,
     totalEarnings: 0
   })
-  const [topDrivers, setTopDrivers] = useState([])
-  const [popularRoutes, setPopularRoutes] = useState([])
+  const [topDrivers, setTopDrivers] = useState<any[]>([])
+  const [popularRoutes, setPopularRoutes] = useState<any[]>([])
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
@@ -79,8 +79,8 @@ export default function AnalyticsPage() {
 
     // Popular routes
     if (completed) {
-      const routeCount = {}
-      completed.forEach(ride => {
+      const routeCount: Record<string, number> = {}
+      completed.forEach((ride: any) => {
         const route = `${ride.pickup} → ${ride.destination}`
         routeCount[route] = (routeCount[route] || 0) + 1
       })

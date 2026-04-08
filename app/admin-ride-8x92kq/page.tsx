@@ -3,9 +3,28 @@ import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
 
 export default function Admin() {
+  const [authenticated, setAuthenticated] = useState(false)
+  const [password, setPassword] = useState("")
   const [bookings, setBookings] = useState<any[]>([])
   const [drivers, setDrivers] = useState<any[]>([])
   const [menuOpen, setMenuOpen] = useState(false)
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
+      setAuthenticated(true)
+      localStorage.setItem("admin_auth", "true")
+    } else {
+      alert("Incorrect password")
+      setPassword("")
+    }
+  }
+
+  useEffect(() => {
+    if (localStorage.getItem("admin_auth") === "true") {
+      setAuthenticated(true)
+    }
+  }, [])
 
   const fetchBookings = async () => {
     const { data } = await supabase
@@ -68,15 +87,88 @@ export default function Admin() {
   }
 
   useEffect(() => {
-    fetchBookings()
-    fetchDrivers()
-
-    const interval = setInterval(() => {
+    if (authenticated) {
       fetchBookings()
-    }, 3000)
+      fetchDrivers()
 
-    return () => clearInterval(interval)
-  }, [])
+      const interval = setInterval(() => {
+        fetchBookings()
+      }, 3000)
+
+      return () => clearInterval(interval)
+    }
+  }, [authenticated])
+
+  if (!authenticated) {
+    return (
+      <div style={{
+        minHeight: "100vh",
+        background: "#000",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
+      }}>
+        <div style={{
+          background: "white",
+          borderRadius: 12,
+          padding: 40,
+          width: "100%",
+          maxWidth: 400,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.3)"
+        }}>
+          <h1 style={{
+            fontSize: 24,
+            fontWeight: 700,
+            marginBottom: 8,
+            color: "#000"
+          }}>
+            Admin Access
+          </h1>
+          <p style={{
+            fontSize: 14,
+            color: "#666",
+            marginBottom: 24
+          }}>
+            Enter password to continue
+          </p>
+          <form onSubmit={handleLogin}>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              style={{
+                width: "100%",
+                padding: 12,
+                border: "1px solid #e0e0e0",
+                borderRadius: 8,
+                fontSize: 14,
+                marginBottom: 16,
+                boxSizing: "border-box"
+              }}
+              autoFocus
+            />
+            <button
+              type="submit"
+              style={{
+                width: "100%",
+                padding: 12,
+                background: "#000",
+                color: "white",
+                border: "none",
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer"
+              }}
+            >
+              Login
+            </button>
+          </form>
+        </div>
+      </div>
+    )
+  }
 
   const { emergencyBookings, todayBookings, tomorrowBookings, upcomingBookings } = groupBookings()
 
@@ -101,7 +193,6 @@ export default function Admin() {
           borderLeft: `4px solid ${!booking.ride_date ? "#f44336" : "#000"}`
         }}
       >
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <span style={{
             padding: "4px 12px",
@@ -126,7 +217,6 @@ export default function Admin() {
           </span>
         </div>
 
-        {/* Customer Info */}
         <div style={{ marginBottom: 16 }}>
           <p style={{ margin: "0 0 8px 0", fontSize: 18, fontWeight: 600, color: "#1a1a1a" }}>
             {booking.name}
@@ -151,7 +241,6 @@ export default function Admin() {
           </a>
         </div>
 
-        {/* Trip Details */}
         <div style={{
           background: "#f8f9fa",
           borderRadius: 8,
@@ -201,7 +290,6 @@ export default function Admin() {
           )}
         </div>
 
-        {/* Assigned Driver */}
         {assignedDriver && (
           <div style={{
             background: "#e3f2fd",
@@ -235,7 +323,6 @@ export default function Admin() {
           </div>
         )}
 
-        {/* Actions */}
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <select
             value={booking.driver_id || ""}
@@ -283,7 +370,6 @@ export default function Admin() {
       background: "#f8f9fa",
       paddingBottom: 20
     }}>
-      {/* Header */}
       <div style={{
         background: "#000",
         padding: 20,
@@ -310,7 +396,6 @@ export default function Admin() {
               </p>
             </div>
             
-            {/* Menu Button */}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               style={{
@@ -330,7 +415,6 @@ export default function Admin() {
             </button>
           </div>
           
-          {/* Dropdown Menu */}
           {menuOpen && (
             <div style={{
               position: "absolute",
@@ -343,7 +427,7 @@ export default function Admin() {
               zIndex: 100,
               overflow: "hidden"
             }}>
-              <a href="/admin" style={{ textDecoration: "none" }}>
+              <a href="/admin-ride-8x92kq" style={{ textDecoration: "none" }}>
                 <div style={{
                   padding: "14px 20px",
                   color: "#1a1a1a",
@@ -411,13 +495,11 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* Content */}
       <div style={{
         maxWidth: 1200,
         margin: "0 auto",
         padding: "0 16px"
       }}>
-        {/* Emergency Section */}
         {emergencyBookings.length > 0 && (
           <div style={{ marginBottom: 30 }}>
             <h2 style={{
@@ -435,7 +517,6 @@ export default function Admin() {
           </div>
         )}
 
-        {/* Today Section */}
         <div style={{ marginBottom: 30 }}>
           <h2 style={{
             fontSize: 18,
@@ -452,7 +533,6 @@ export default function Admin() {
           )}
         </div>
 
-        {/* Tomorrow Section */}
         <div style={{ marginBottom: 30 }}>
           <h2 style={{
             fontSize: 18,
@@ -469,7 +549,6 @@ export default function Admin() {
           )}
         </div>
 
-        {/* Upcoming Section */}
         <div style={{ marginBottom: 30 }}>
           <h2 style={{
             fontSize: 18,

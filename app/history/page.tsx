@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
 
 export default function HistoryPage() {
-  const [bookings, setBookings] = useState([])
+  const [bookings, setBookings] = useState<any[]>([])
   const [filter, setFilter] = useState("all")
   const [menuOpen, setMenuOpen] = useState(false)
 

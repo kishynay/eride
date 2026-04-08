@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, type FormEvent } from "react"
 import { supabase } from "../../lib/supabase"
 import { useSearchParams } from "next/navigation"
 
@@ -11,7 +11,7 @@ export default function FeedbackPage() {
   const [comment, setComment] = useState("")
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-  const [booking, setBooking] = useState(null)
+  const [booking, setBooking] = useState<any>(null)
 
   useEffect(() => {
     if (bookingId) {
@@ -29,7 +29,7 @@ export default function FeedbackPage() {
     if (data) setBooking(data)
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
 

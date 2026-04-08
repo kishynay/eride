@@ -18,7 +18,6 @@ export interface Driver {
   vehicle_type: string
   vehicle_number: string
   license_number: string
-  is_available: boolean
   rating?: number
   total_rides?: number
   created_at: string
