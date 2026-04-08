@@ -106,7 +106,7 @@ export default function EarningsPage() {
               zIndex: 100,
               overflow: "hidden"
             }}>
-              <a href="/admin" style={{ textDecoration: "none" }}>
+              <a href="/admin-ride-8x92kq" style={{ textDecoration: "none" }}>
                 <div style={{
                   padding: "14px 20px",
                   color: "#1a1a1a",

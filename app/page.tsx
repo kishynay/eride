@@ -266,7 +266,7 @@ export default function Home() {
 
         {/* Bottom Section */}
         <div style={{ textAlign: "center" }}>
-          <a href="/admin" style={{
+          <a href="/admin-ride-8x92kq" style={{
             color: "rgba(255,255,255,0.5)",
             fontSize: "14px",
             textDecoration: "none",

@@ -12,9 +12,13 @@ export default function Admin() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
+    const enteredUsername = username.trim()
+    const enteredPassword = password.trim()
+    const expectedUsername = (process.env.NEXT_PUBLIC_ADMIN_USERNAME || "").trim()
+    const expectedPassword = (process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "").trim()
     if (
-      username === process.env.NEXT_PUBLIC_ADMIN_USERNAME &&
-      password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD
+      enteredUsername === expectedUsername &&
+      enteredPassword === expectedPassword
     ) {
       setAuthenticated(true)
       localStorage.setItem("admin_auth", "true")
