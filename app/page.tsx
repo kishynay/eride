@@ -1,280 +1,103 @@
 "use client"
 
+const VEHICLES = ["🚗 Car", "🛺 Auto", "🏍️ Bike", "🚐 Van", "🚌 Bus", "🚛 Mini Truck", "🚜 Tempo"]
+
 export default function Home() {
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#000",
-      position: "relative",
-      overflow: "hidden"
-    }}>
-      {/* Animated Background Pattern */}
+    <div style={{ minHeight: "100vh", background: "#fff", fontFamily: "inherit" }}>
+      {/* Hero */}
       <div style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        opacity: 0.25,
-        zIndex: 0
+        background: "#000",
+        padding: "60px 20px 48px",
+        textAlign: "center"
       }}>
-        {/* Road Lines */}
-        <div style={{
-          position: "absolute",
-          top: "20%",
-          left: "-10%",
-          width: "120%",
-          height: "2px",
-          background: "linear-gradient(90deg, transparent 0%, #4CAF50 50%, transparent 100%)",
-          transform: "rotate(-5deg)"
-        }}></div>
-        <div style={{
-          position: "absolute",
-          top: "40%",
-          left: "-10%",
-          width: "120%",
-          height: "2px",
-          background: "linear-gradient(90deg, transparent 0%, #2196F3 50%, transparent 100%)",
-          transform: "rotate(5deg)"
-        }}></div>
-        <div style={{
-          position: "absolute",
-          top: "60%",
-          left: "-10%",
-          width: "120%",
-          height: "2px",
-          background: "linear-gradient(90deg, transparent 0%, #FF9800 50%, transparent 100%)",
-          transform: "rotate(-3deg)"
-        }}></div>
-        
-        {/* Location Pins */}
-        <div style={{
-          position: "absolute",
-          top: "15%",
-          left: "10%",
-          fontSize: "40px",
-          opacity: 0.4
-        }}>📍</div>
-        <div style={{
-          position: "absolute",
-          top: "25%",
-          right: "15%",
-          fontSize: "35px",
-          opacity: 0.35
-        }}>🏁</div>
-        <div style={{
-          position: "absolute",
-          bottom: "20%",
-          left: "20%",
-          fontSize: "45px",
-          opacity: 0.4
-        }}>🚗</div>
-        <div style={{
-          position: "absolute",
-          top: "50%",
-          right: "10%",
-          fontSize: "38px",
-          opacity: 0.45
-        }}>🛺</div>
-        <div style={{
-          position: "absolute",
-          bottom: "30%",
-          right: "25%",
-          fontSize: "42px",
-          opacity: 0.4
-        }}>🏍️</div>
-        
-        {/* Gradient Circles */}
-        <div style={{
-          position: "absolute",
-          top: "10%",
-          left: "5%",
-          width: "300px",
-          height: "300px",
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(76, 175, 80, 0.2) 0%, transparent 70%)",
-          filter: "blur(40px)"
-        }}></div>
-        <div style={{
-          position: "absolute",
-          bottom: "10%",
-          right: "5%",
-          width: "350px",
-          height: "350px",
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(33, 150, 243, 0.2) 0%, transparent 70%)",
-          filter: "blur(40px)"
-        }}></div>
-        
-        {/* Grid Pattern */}
-        <svg width="100%" height="100%" style={{ position: "absolute", top: 0, left: 0 }}>
-          <defs>
-            <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
-              <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5"/>
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
-        </svg>
+        <p style={{ color: "#4CAF50", fontSize: 13, fontWeight: 700, letterSpacing: 2, margin: "0 0 12px", textTransform: "uppercase" }}>
+          Pre-Planned Rides
+        </p>
+        <h1 style={{ color: "#fff", fontSize: 36, fontWeight: 800, margin: "0 0 16px", lineHeight: 1.2 }}>
+          Book Your Driver<br />Before the Day
+        </h1>
+        <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 16, margin: "0 0 32px", lineHeight: 1.6 }}>
+          Schedule a verified driver hours or days in advance.<br />
+          No last-minute stress. Just show up and go.
+        </p>
+
+        {/* Vehicle chips */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", marginBottom: 36 }}>
+          {VEHICLES.map(v => (
+            <span key={v} style={{
+              background: "rgba(255,255,255,0.1)",
+              color: "#fff",
+              padding: "6px 14px",
+              borderRadius: 20,
+              fontSize: 13,
+              fontWeight: 500
+            }}>{v}</span>
+          ))}
+        </div>
+
+        <a href="/rider" style={{ textDecoration: "none" }}>
+          <button style={{
+            background: "#4CAF50",
+            color: "#fff",
+            border: "none",
+            borderRadius: 12,
+            padding: "16px 40px",
+            fontSize: 17,
+            fontWeight: 700,
+            cursor: "pointer",
+            width: "100%",
+            maxWidth: 340
+          }}>
+            Book a Ride →
+          </button>
+        </a>
       </div>
 
-      {/* Content */}
-      <div style={{
-        position: "relative",
-        zIndex: 1,
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        padding: "40px 20px"
-      }}>
-        {/* Top Section */}
-        <div style={{ textAlign: "center", paddingTop: "60px" }}>
-          <h1 style={{
-            fontSize: "48px",
-            fontWeight: "700",
-            color: "white",
-            margin: "0 0 16px 0",
-            letterSpacing: "-1px"
-          }}>
-            Ride
-          </h1>
-          <p style={{
-            fontSize: "18px",
-            color: "rgba(255,255,255,0.7)",
-            margin: 0,
-            fontWeight: "300"
-          }}>
-            Your journey, simplified
-          </p>
-        </div>
-
-        {/* Center Cards */}
-        <div style={{
-          maxWidth: "400px",
-          width: "100%",
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: "16px"
-        }}>
-          {/* Rider Card */}
-          <a href="/rider" style={{ textDecoration: "none" }}>
+      {/* How it works */}
+      <div style={{ padding: "48px 20px", maxWidth: 480, margin: "0 auto" }}>
+        <h2 style={{ fontSize: 22, fontWeight: 700, textAlign: "center", margin: "0 0 32px" }}>
+          How it works
+        </h2>
+        {[
+          { icon: "📅", title: "Pick a date & time", desc: "Schedule your trip hours or days ahead." },
+          { icon: "🚗", title: "Choose your vehicle", desc: "Car, Auto, Bike, Van, Bus and more." },
+          { icon: "✅", title: "Driver confirmed", desc: "A verified driver is assigned to your booking." },
+          { icon: "🚀", title: "Ride on the day", desc: "Driver arrives at your door, on time." },
+        ].map(step => (
+          <div key={step.title} style={{ display: "flex", gap: 16, marginBottom: 24 }}>
             <div style={{
-              background: "white",
-              borderRadius: "16px",
-              padding: "24px",
-              cursor: "pointer",
-              transition: "transform 0.2s",
-              boxShadow: "0 4px 20px rgba(0,0,0,0.3)"
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-4px)"}
-            onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                <div style={{
-                  width: "56px",
-                  height: "56px",
-                  background: "linear-gradient(135deg, #4CAF50 0%, #45a049 100%)",
-                  borderRadius: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "28px"
-                }}>
-                  🚗
-                </div>
-                <div style={{ flex: 1 }}>
-                  <h2 style={{
-                    fontSize: "20px",
-                    fontWeight: "600",
-                    color: "#1a1a1a",
-                    margin: "0 0 4px 0"
-                  }}>
-                    Book a Ride
-                  </h2>
-                  <p style={{
-                    fontSize: "14px",
-                    color: "#666",
-                    margin: 0
-                  }}>
-                    Quick and reliable rides
-                  </p>
-                </div>
-                <div style={{
-                  fontSize: "24px",
-                  color: "#ccc"
-                }}>
-                  →
-                </div>
-              </div>
+              width: 48, height: 48, borderRadius: 12,
+              background: "#f5f5f5",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 24, flexShrink: 0
+            }}>{step.icon}</div>
+            <div>
+              <p style={{ margin: "0 0 4px", fontWeight: 700, fontSize: 15 }}>{step.title}</p>
+              <p style={{ margin: 0, fontSize: 14, color: "#666" }}>{step.desc}</p>
             </div>
-          </a>
+          </div>
+        ))}
+      </div>
 
-          {/* Driver Card */}
-          <a href="/driver" style={{ textDecoration: "none" }}>
-            <div style={{
-              background: "white",
-              borderRadius: "16px",
-              padding: "24px",
-              cursor: "pointer",
-              transition: "transform 0.2s",
-              boxShadow: "0 4px 20px rgba(0,0,0,0.3)"
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-4px)"}
-            onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                <div style={{
-                  width: "56px",
-                  height: "56px",
-                  background: "linear-gradient(135deg, #2196F3 0%, #1976D2 100%)",
-                  borderRadius: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "28px"
-                }}>
-                  🧑‍✈️
-                </div>
-                <div style={{ flex: 1 }}>
-                  <h2 style={{
-                    fontSize: "20px",
-                    fontWeight: "600",
-                    color: "#1a1a1a",
-                    margin: "0 0 4px 0"
-                  }}>
-                    Drive with Us
-                  </h2>
-                  <p style={{
-                    fontSize: "14px",
-                    color: "#666",
-                    margin: 0
-                  }}>
-                    Earn on your schedule
-                  </p>
-                </div>
-                <div style={{
-                  fontSize: "24px",
-                  color: "#ccc"
-                }}>
-                  →
-                </div>
-              </div>
-            </div>
-          </a>
-        </div>
-
-        {/* Bottom Section */}
-        <div style={{ textAlign: "center" }}>
-          <a href="/admin-ride-8x92kq" style={{
-            color: "rgba(255,255,255,0.5)",
-            fontSize: "14px",
-            textDecoration: "none",
-            fontWeight: "300"
+      {/* CTA strip */}
+      <div style={{ background: "#f8f9fa", padding: "32px 20px", textAlign: "center" }}>
+        <p style={{ fontSize: 18, fontWeight: 700, margin: "0 0 8px" }}>Are you a driver?</p>
+        <p style={{ fontSize: 14, color: "#666", margin: "0 0 20px" }}>Join our network and earn on your schedule.</p>
+        <a href="/driver" style={{ textDecoration: "none" }}>
+          <button style={{
+            background: "#000",
+            color: "#fff",
+            border: "none",
+            borderRadius: 10,
+            padding: "13px 32px",
+            fontSize: 15,
+            fontWeight: 700,
+            cursor: "pointer"
           }}>
-            Admin Access
-          </a>
-        </div>
+            Register as Driver →
+          </button>
+        </a>
       </div>
     </div>
   )

@@ -3,289 +3,280 @@
 import { useState, useEffect } from "react"
 import { supabase } from "../../lib/supabase"
 
-type DriverForm = {
+interface DriverForm {
   name: string
   phone: string
   vehicle_type: string
   area: string
 }
 
-type LocationCoords = {
-  lat: number | null
-  lng: number | null
+interface Ride {
+  id: string
+  name: string
+  phone: string
+  vehicle_type: string
+  pickup: string
+  destination: string
+  ride_date: string
+  ride_time: string
+  notes: string
+  pickup_lat: number | null
+  pickup_lng: number | null
+  status: string
 }
 
-const VEHICLE_OPTIONS = [
-  { id: "car", label: "Car", icon: "🚗" },
-  { id: "auto", label: "Auto", icon: "🛺" },
-  { id: "bike", label: "Bike", icon: "🏍️" },
-  { id: "van", label: "Van", icon: "🚐" },
-  { id: "bus", label: "Bus", icon: "🚌" },
+const VEHICLES = [
+  { id: "car",        label: "Car",        icon: "🚗" },
+  { id: "auto",       label: "Auto",       icon: "🛺" },
+  { id: "bike",       label: "Bike",       icon: "🏍️" },
+  { id: "van",        label: "Van",        icon: "🚐" },
+  { id: "bus",        label: "Bus",        icon: "🚌" },
   { id: "mini_truck", label: "Mini Truck", icon: "🚛" },
-  { id: "tempo", label: "Tempo", icon: "🚜" },
+  { id: "tempo",      label: "Tempo",      icon: "🚜" },
 ]
 
-const INITIAL_FORM: DriverForm = {
-  name: "",
-  phone: "",
-  vehicle_type: "",
-  area: ""
-}
+const STEPS = ["Your Details", "Vehicle Type", "Confirm"]
 
 export default function DriverPage() {
   const [driverId, setDriverId] = useState<string | null>(null)
-  const [rides, setRides] = useState<any[]>([])
-  const [form, setForm] = useState<DriverForm>(INITIAL_FORM)
-  const [location, setLocation] = useState<LocationCoords>({ lat: null, lng: null })
+  const [rides, setRides] = useState<Ride[]>([])
+  const [step, setStep] = useState(1)
+  const [form, setForm] = useState<DriverForm>({ name: "", phone: "", vehicle_type: "", area: "" })
+  const [lat, setLat] = useState<number | null>(null)
+  const [lng, setLng] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [registered, setRegistered] = useState(false)
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(pos => {
-      setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+      setLat(pos.coords.latitude)
+      setLng(pos.coords.longitude)
     })
-
-    const savedDriverId = localStorage.getItem("driver_id")
-    if (savedDriverId) {
-      setDriverId(savedDriverId)
-      verifyDriver(savedDriverId)
+    const saved = localStorage.getItem("driver_id")
+    if (saved) {
+      verifyDriver(saved)
     }
   }, [])
 
   useEffect(() => {
-    if (driverId) {
-      fetchAssignedRides()
-      const interval = setInterval(fetchAssignedRides, 3000)
-      return () => clearInterval(interval)
-    }
+    if (!driverId) return
+    fetchRides()
+    const interval = setInterval(fetchRides, 3000)
+    return () => clearInterval(interval)
   }, [driverId])
 
   const verifyDriver = async (id: string) => {
-    const { data } = await supabase
-      .from("drivers")
-      .select("id")
-      .eq("id", id)
-      .single()
-    
-    if (!data) {
-      localStorage.removeItem("driver_id")
-      setDriverId(null)
-    }
+    const { data } = await supabase.from("drivers").select("id").eq("id", id).single()
+    if (data) setDriverId(id)
+    else localStorage.removeItem("driver_id")
   }
 
-  const fetchAssignedRides = async () => {
+  const fetchRides = async () => {
     const { data } = await supabase
       .from("bookings")
       .select("*")
       .eq("driver_id", driverId)
       .neq("status", "completed")
       .order("created_at", { ascending: false })
-    
-    if (data) setRides(data)
+    if (data) setRides(data as Ride[])
   }
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleRegister = async () => {
     setLoading(true)
     setError("")
-
-    if (!location.lat || !location.lng) {
-      setError("Please enable location access")
+    try {
+      const { data, error: dbError } = await supabase
+        .from("drivers")
+        .insert([{ name: form.name, phone: form.phone, vehicle_type: form.vehicle_type, area: form.area, lat, lng }])
+        .select()
+      if (dbError) throw new Error(dbError.message)
+      localStorage.setItem("driver_id", data![0].id)
+      setDriverId(data![0].id)
+      setRegistered(true)
+    } catch (e: any) {
+      setError(e.message || "Registration failed")
+    } finally {
       setLoading(false)
-      return
-    }
-
-    const { data, error: dbError } = await supabase
-      .from("drivers")
-      .insert([{
-        name: form.name,
-        phone: form.phone,
-        vehicle_type: form.vehicle_type,
-        area: form.area,
-        lat: location.lat,
-        lng: location.lng
-      }])
-      .select()
-
-    setLoading(false)
-
-    if (!dbError && data?.[0]) {
-      localStorage.setItem("driver_id", data[0].id)
-      setDriverId(data[0].id)
-    } else {
-      setError(dbError?.message || "Registration failed")
     }
   }
 
   const completeRide = async (rideId: string) => {
-    await supabase
-      .from("bookings")
-      .update({ status: "completed" })
-      .eq("id", rideId)
-    fetchAssignedRides()
+    await supabase.from("bookings").update({ status: "completed" }).eq("id", rideId)
+    fetchRides()
   }
 
-  // Registration Form
+  const canNext = () => {
+    if (step === 1) return form.name.trim() && form.phone.trim() && form.area.trim()
+    if (step === 2) return !!form.vehicle_type
+    return true
+  }
+
+  const vehicle = VEHICLES.find(v => v.id === form.vehicle_type)
+
+  // ── Registration success screen ──
+  if (registered) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" }}>
+        <div style={{ fontSize: 64, marginBottom: 20 }}>🎉</div>
+        <h1 style={{ fontSize: 26, fontWeight: 800, margin: "0 0 12px" }}>You're registered!</h1>
+        <p style={{ fontSize: 15, color: "#555", margin: "0 0 8px" }}>Welcome to eRide, <strong>{form.name}</strong>.</p>
+        <p style={{ fontSize: 14, color: "#888", margin: "0 0 32px" }}>
+          {vehicle?.icon} {vehicle?.label} · {form.area}
+        </p>
+        <div style={{
+          background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12,
+          padding: "16px 20px", marginBottom: 32, maxWidth: 320, width: "100%"
+        }}>
+          <p style={{ margin: 0, fontSize: 14, color: "#166534" }}>
+            ✅ Our team will review your profile and assign rides soon. Keep this page bookmarked.
+          </p>
+        </div>
+        <button
+          onClick={() => setRegistered(false)}
+          style={{ background: "#000", color: "#fff", border: "none", borderRadius: 10, padding: "13px 32px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}
+        >
+          View My Dashboard
+        </button>
+      </div>
+    )
+  }
+
+  // ── Registration flow ──
   if (!driverId) {
     return (
       <div style={{ minHeight: "100vh", background: "#f8f9fa", paddingBottom: 100 }}>
-        <div style={{
-          background: "#000",
-          padding: "20px",
-          position: "sticky",
-          top: 0,
-          zIndex: 10
-        }}>
+        {/* Header */}
+        <div style={{ background: "#000", padding: "20px 20px 16px", position: "sticky", top: 0, zIndex: 10 }}>
           <div style={{ maxWidth: 500, margin: "0 auto" }}>
-            <h1 style={{ color: "#fff", fontSize: 20, fontWeight: 700, margin: 0 }}>
-              🧑‍✈️ Driver Registration
-            </h1>
+            <h1 style={{ color: "#fff", fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>🧑✈️ Driver Registration</h1>
+            {/* Step bar */}
+            <div style={{ display: "flex", gap: 6 }}>
+              {STEPS.map((label, i) => (
+                <div key={label} style={{ flex: 1 }}>
+                  <div style={{
+                    height: 4, borderRadius: 2,
+                    background: i + 1 <= step ? "#4CAF50" : "rgba(255,255,255,0.2)"
+                  }} />
+                  <p style={{ color: i + 1 <= step ? "#4CAF50" : "rgba(255,255,255,0.4)", fontSize: 10, margin: "4px 0 0", fontWeight: 600 }}>
+                    {label}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
         <div style={{ maxWidth: 500, margin: "20px auto", padding: "0 16px" }}>
-          <form onSubmit={handleRegister}>
-            <div style={{
-              background: "white",
-              borderRadius: 14,
-              padding: "22px 20px",
-              boxShadow: "0 2px 12px rgba(0,0,0,0.07)"
-            }}>
-              <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>
-                Join Our Driver Network
-              </h2>
-              <p style={{ fontSize: 14, color: "#888", margin: "4px 0 20px" }}>
-                Start earning on your schedule
-              </p>
+          <div style={{ background: "#fff", borderRadius: 14, padding: "22px 20px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
 
-              <label style={styles.label}>Full Name</label>
-              <input
-                type="text"
-                placeholder="Enter your name"
-                value={form.name}
-                onChange={e => setForm({ ...form, name: e.target.value })}
-                required
-                style={styles.input}
-              />
+            {/* Step 1 — Details */}
+            {step === 1 && (
+              <>
+                <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>Your Details</h2>
+                <p style={{ fontSize: 13, color: "#888", margin: "0 0 20px" }}>Basic info to get you started</p>
 
-              <label style={{ ...styles.label, marginTop: 16 }}>Phone Number</label>
-              <input
-                type="tel"
-                placeholder="+91 XXXXX XXXXX"
-                value={form.phone}
-                onChange={e => setForm({ ...form, phone: e.target.value })}
-                required
-                style={styles.input}
-              />
+                <label style={s.label}>Full Name</label>
+                <input style={s.input} placeholder="Enter your name" value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })} />
 
-              <label style={{ ...styles.label, marginTop: 16 }}>Vehicle Type</label>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {VEHICLE_OPTIONS.map(v => (
-                  <button
-                    key={v.id}
-                    type="button"
-                    onClick={() => setForm({ ...form, vehicle_type: v.id })}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
+                <label style={{ ...s.label, marginTop: 16 }}>Phone Number</label>
+                <input style={s.input} type="tel" placeholder="+91 XXXXX XXXXX" value={form.phone}
+                  onChange={e => setForm({ ...form, phone: e.target.value })} />
+
+                <label style={{ ...s.label, marginTop: 16 }}>Operating Area</label>
+                <input style={s.input} placeholder="e.g. Hyderabad, Banjara Hills" value={form.area}
+                  onChange={e => setForm({ ...form, area: e.target.value })} />
+
+                {lat && <p style={{ fontSize: 12, color: "#16a34a", margin: "10px 0 0" }}>✓ GPS location captured</p>}
+              </>
+            )}
+
+            {/* Step 2 — Vehicle */}
+            {step === 2 && (
+              <>
+                <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>Vehicle Type</h2>
+                <p style={{ fontSize: 13, color: "#888", margin: "0 0 20px" }}>What do you drive?</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {VEHICLES.map(v => (
+                    <button key={v.id} onClick={() => setForm({ ...form, vehicle_type: v.id })} style={{
+                      display: "flex", alignItems: "center", gap: 12,
                       padding: "12px 14px",
                       background: form.vehicle_type === v.id ? "#000" : "#fff",
                       color: form.vehicle_type === v.id ? "#fff" : "#1a1a1a",
-                      border: form.vehicle_type === v.id ? "2px solid #000" : "2px solid #e8e8e8",
-                      borderRadius: 10,
-                      cursor: "pointer",
-                      fontSize: 15,
-                      fontWeight: 600,
-                      textAlign: "left"
-                    }}
-                  >
-                    <span style={{ fontSize: 24 }}>{v.icon}</span>
-                    {v.label}
-                  </button>
-                ))}
-              </div>
-
-              <label style={{ ...styles.label, marginTop: 16 }}>Area / Location</label>
-              <input
-                type="text"
-                placeholder="Your operating area"
-                value={form.area}
-                onChange={e => setForm({ ...form, area: e.target.value })}
-                required
-                style={styles.input}
-              />
-
-              {location.lat && (
-                <p style={{ fontSize: 12, color: "#16a34a", margin: "8px 0 0" }}>
-                  ✓ GPS location captured
-                </p>
-              )}
-
-              {error && (
-                <div style={{
-                  marginTop: 16,
-                  padding: "10px 14px",
-                  background: "#fff0f0",
-                  border: "1px solid #fecaca",
-                  borderRadius: 8,
-                  color: "#dc2626",
-                  fontSize: 13
-                }}>
-                  ⚠️ {error}
+                      border: `2px solid ${form.vehicle_type === v.id ? "#000" : "#e8e8e8"}`,
+                      borderRadius: 10, cursor: "pointer", fontSize: 15, fontWeight: 600, textAlign: "left"
+                    }}>
+                      <span style={{ fontSize: 24 }}>{v.icon}</span>{v.label}
+                    </button>
+                  ))}
                 </div>
-              )}
-            </div>
+              </>
+            )}
 
-            <div style={{
-              position: "fixed",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              background: "white",
-              padding: "12px 16px",
-              boxShadow: "0 -2px 12px rgba(0,0,0,0.08)"
-            }}>
-              <div style={{ maxWidth: 500, margin: "0 auto" }}>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  style={{
-                    width: "100%",
-                    padding: "15px",
-                    background: loading ? "#ccc" : "#000",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 10,
-                    fontSize: 16,
-                    fontWeight: 700,
-                    cursor: loading ? "not-allowed" : "pointer"
-                  }}
-                >
-                  {loading ? "Registering..." : "✓ Register as Driver"}
-                </button>
-              </div>
-            </div>
-          </form>
+            {/* Step 3 — Confirm */}
+            {step === 3 && (
+              <>
+                <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>Confirm Details</h2>
+                <p style={{ fontSize: 13, color: "#888", margin: "0 0 20px" }}>Review before submitting</p>
+                {[
+                  { label: "Name", value: form.name },
+                  { label: "Phone", value: form.phone },
+                  { label: "Vehicle", value: `${vehicle?.icon} ${vehicle?.label}` },
+                  { label: "Area", value: form.area },
+                ].map(row => (
+                  <div key={row.label} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #f0f0f0" }}>
+                    <span style={{ fontSize: 14, color: "#888" }}>{row.label}</span>
+                    <span style={{ fontSize: 14, fontWeight: 600 }}>{row.value}</span>
+                  </div>
+                ))}
+                {error && (
+                  <div style={{ marginTop: 16, padding: "10px 14px", background: "#fff0f0", border: "1px solid #fecaca", borderRadius: 8, color: "#dc2626", fontSize: 13 }}>
+                    ⚠️ {error}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom nav */}
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#fff", padding: "12px 16px", boxShadow: "0 -2px 12px rgba(0,0,0,0.08)" }}>
+          <div style={{ maxWidth: 500, margin: "0 auto", display: "flex", gap: 10 }}>
+            {step > 1 && (
+              <button onClick={() => setStep(step - 1)} style={{
+                flex: 1, padding: 14, background: "#f0f0f0", color: "#333",
+                border: "none", borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: "pointer"
+              }}>← Back</button>
+            )}
+            {step < 3 ? (
+              <button onClick={() => setStep(step + 1)} disabled={!canNext()} style={{
+                flex: 2, padding: 14,
+                background: canNext() ? "#000" : "#ccc",
+                color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700,
+                cursor: canNext() ? "pointer" : "not-allowed"
+              }}>Continue →</button>
+            ) : (
+              <button onClick={handleRegister} disabled={loading} style={{
+                flex: 2, padding: 14,
+                background: loading ? "#ccc" : "#4CAF50",
+                color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700,
+                cursor: loading ? "not-allowed" : "pointer"
+              }}>{loading ? "Registering..." : "✓ Submit Registration"}</button>
+            )}
+          </div>
         </div>
       </div>
     )
   }
 
-  // Driver Dashboard
+  // ── Driver Dashboard ──
   return (
     <div style={{ minHeight: "100vh", background: "#f8f9fa", paddingBottom: 20 }}>
-      <div style={{
-        background: "#000",
-        padding: "20px",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.08)",
-        marginBottom: 20
-      }}>
+      <div style={{ background: "#000", padding: "20px", marginBottom: 20 }}>
         <div style={{ maxWidth: 800, margin: "0 auto" }}>
-          <h1 style={{ color: "#fff", fontSize: 20, fontWeight: 700, margin: "0 0 4px" }}>
-            🧑‍✈️ Driver Dashboard
-          </h1>
-          <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, margin: 0 }}>
+          <h1 style={{ color: "#fff", fontSize: 20, fontWeight: 700, margin: "0 0 4px" }}>🧑✈️ Driver Dashboard</h1>
+          <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, margin: 0 }}>
             {rides.length} active ride{rides.length !== 1 ? "s" : ""}
           </p>
         </div>
@@ -293,160 +284,28 @@ export default function DriverPage() {
 
       <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 16px" }}>
         {rides.length === 0 && (
-          <div style={{
-            background: "white",
-            borderRadius: 12,
-            padding: "40px 20px",
-            textAlign: "center",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
-          }}>
-            <p style={{ fontSize: 16, color: "#999", margin: 0 }}>
-              No assigned rides yet
-            </p>
+          <div style={{ background: "#fff", borderRadius: 12, padding: "40px 20px", textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+            <p style={{ fontSize: 16, color: "#999", margin: 0 }}>No assigned rides yet</p>
           </div>
         )}
 
         {rides.map(ride => {
-          const vehicle = VEHICLE_OPTIONS.find(v => v.id === ride.vehicle_type)
+          const v = VEHICLES.find(x => x.id === ride.vehicle_type)
           return (
-            <div
-              key={ride.id}
-              style={{
-                background: "white",
-                borderRadius: 12,
-                padding: "20px",
-                marginBottom: 16,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                borderLeft: `4px solid ${ride.ride_type === "emergency" ? "#f44336" : "#000"}`
-              }}
-            >
-              <div style={{ marginBottom: 12 }}>
-                <span style={{
-                  display: "inline-block",
-                  padding: "4px 12px",
-                  background: ride.ride_type === "emergency" ? "#f44336" : "#000",
-                  color: "white",
-                  borderRadius: 4,
-                  fontSize: 12,
-                  fontWeight: 600
-                }}>
-                  {ride.ride_type === "emergency" ? "🚨 EMERGENCY" : "📅 SCHEDULED"}
-                </span>
+            <div key={ride.id} style={{ background: "#fff", borderRadius: 12, padding: 20, marginBottom: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.08)", borderLeft: "4px solid #000" }}>
+              <p style={{ margin: "0 0 4px", fontSize: 17, fontWeight: 700 }}>{ride.name}</p>
+              <p style={{ margin: "0 0 12px", fontSize: 14, color: "#666" }}>📞 {ride.phone}</p>
+              <div style={{ background: "#f8f9fa", borderRadius: 8, padding: 12, marginBottom: 12 }}>
+                <p style={{ margin: "0 0 6px", fontSize: 13, color: "#555" }}><strong>Vehicle:</strong> {v?.icon} {v?.label}</p>
+                <p style={{ margin: "0 0 6px", fontSize: 13, color: "#555" }}><strong>Pickup:</strong> {ride.pickup}</p>
+                <p style={{ margin: "0 0 6px", fontSize: 13, color: "#555" }}><strong>Destination:</strong> {ride.destination}</p>
+                <p style={{ margin: 0, fontSize: 13, color: "#555" }}><strong>Date:</strong> {ride.ride_date} at {ride.ride_time}</p>
               </div>
-
-              <p style={{ margin: "0 0 8px 0", fontSize: 18, fontWeight: 600, color: "#1a1a1a" }}>
-                {ride.name}
-              </p>
-              <p style={{ margin: "0 0 4px 0", fontSize: 15, color: "#666" }}>
-                📞 {ride.phone}
-              </p>
-
-              <div style={{
-                background: "#f8f9fa",
-                borderRadius: 8,
-                padding: 12,
-                margin: "16px 0"
-              }}>
-                <p style={{ margin: "0 0 8px 0", fontSize: 14, color: "#666" }}>
-                  <strong style={{ color: "#1a1a1a" }}>Vehicle:</strong> {vehicle?.icon} {vehicle?.label}
-                </p>
-                <p style={{ margin: "0 0 8px 0", fontSize: 14, color: "#666" }}>
-                  <strong style={{ color: "#1a1a1a" }}>Pickup:</strong> {ride.pickup}
-                </p>
-                <p style={{ margin: "0 0 8px 0", fontSize: 14, color: "#666" }}>
-                  <strong style={{ color: "#1a1a1a" }}>Destination:</strong> {ride.destination}
-                </p>
-                {ride.ride_type === "scheduled" && (
-                  <p style={{ margin: "0 0 8px 0", fontSize: 14, color: "#666" }}>
-                    <strong style={{ color: "#1a1a1a" }}>Time:</strong> {ride.ride_date} at {ride.ride_time}
-                  </p>
-                )}
-                {ride.notes && (
-                  <p style={{ margin: 0, fontSize: 14, color: "#666" }}>
-                    <strong style={{ color: "#1a1a1a" }}>Notes:</strong> {ride.notes}
-                  </p>
-                )}
-
-                <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                  {ride.pickup_lat && ride.pickup_lng && (
-                    <>
-                      <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${ride.pickup_lat},${ride.pickup_lng}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ flex: 1, textDecoration: "none" }}
-                      >
-                        <button style={{
-                          width: "100%",
-                          padding: 8,
-                          background: "#4285F4",
-                          color: "white",
-                          border: "none",
-                          borderRadius: 6,
-                          fontSize: 13,
-                          fontWeight: 600,
-                          cursor: "pointer"
-                        }}>
-                          📍 Pickup
-                        </button>
-                      </a>
-                      <a
-                        href={`https://www.google.com/maps/dir/?api=1&origin=${ride.pickup_lat},${ride.pickup_lng}&destination=${encodeURIComponent(ride.destination)}&travelmode=driving`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ flex: 1, textDecoration: "none" }}
-                      >
-                        <button style={{
-                          width: "100%",
-                          padding: 8,
-                          background: "#34A853",
-                          color: "white",
-                          border: "none",
-                          borderRadius: 6,
-                          fontSize: 13,
-                          fontWeight: 600,
-                          cursor: "pointer"
-                        }}>
-                          🗺️ Navigate
-                        </button>
-                      </a>
-                    </>
-                  )}
-                </div>
-              </div>
-
               <div style={{ display: "flex", gap: 10 }}>
                 <a href={`tel:${ride.phone}`} style={{ flex: 1, textDecoration: "none" }}>
-                  <button style={{
-                    width: "100%",
-                    padding: 12,
-                    background: "#4CAF50",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 8,
-                    fontSize: 15,
-                    fontWeight: 600,
-                    cursor: "pointer"
-                  }}>
-                    📞 Call
-                  </button>
+                  <button style={{ width: "100%", padding: 12, background: "#4CAF50", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>📞 Call</button>
                 </a>
-                <button
-                  onClick={() => completeRide(ride.id)}
-                  style={{
-                    flex: 1,
-                    padding: 12,
-                    background: "#000",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 8,
-                    fontSize: 15,
-                    fontWeight: 600,
-                    cursor: "pointer"
-                  }}
-                >
-                  ✓ Complete
-                </button>
+                <button onClick={() => completeRide(ride.id)} style={{ flex: 1, padding: 12, background: "#000", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>✓ Complete</button>
               </div>
             </div>
           )
@@ -456,23 +315,7 @@ export default function DriverPage() {
   )
 }
 
-const styles = {
-  label: {
-    display: "block" as const,
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#444",
-    marginBottom: 6,
-  },
-  input: {
-    width: "100%",
-    padding: "13px 14px",
-    border: "1.5px solid #e8e8e8",
-    borderRadius: 10,
-    fontSize: 16,
-    boxSizing: "border-box" as const,
-    background: "#fafafa",
-    outline: "none",
-    fontFamily: "inherit",
-  },
+const s = {
+  label: { display: "block" as const, fontSize: 13, fontWeight: 600, color: "#444", marginBottom: 6 },
+  input: { width: "100%", padding: "13px 14px", border: "1.5px solid #e8e8e8", borderRadius: 10, fontSize: 16, boxSizing: "border-box" as const, background: "#fafafa", outline: "none", fontFamily: "inherit" },
 }
