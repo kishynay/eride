@@ -298,26 +298,14 @@ export default function Admin() {
             </p>
           )}
           {booking.pickup_lat && booking.pickup_lng && (
-            <a
-              href={`https://www.google.com/maps/search/?api=1&query=${booking.pickup_lat},${booking.pickup_lng}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ textDecoration: "none" }}
-            >
-              <button style={{
-                padding: "6px 12px",
-                background: "#4285F4",
-                color: "white",
-                border: "none",
-                borderRadius: 6,
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
-                marginTop: 8
-              }}>
-                📍 View on Map
-              </button>
-            </a>
+            <iframe
+              width="100%"
+              height="180"
+              style={{ border: 0, borderRadius: 8, marginTop: 10 }}
+              loading="lazy"
+              allowFullScreen
+              src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${booking.pickup_lat},${booking.pickup_lng}&zoom=15`}
+            />
           )}
         </div>
 
