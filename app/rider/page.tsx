@@ -268,7 +268,7 @@ function StepConfirm({ form }: { form: FormData }) {
   )
 }
 
-function SuccessScreen({ form, onReset }: { form: FormData; onReset: () => void }) {
+function SuccessScreen({ form, bookingId, onReset }: { form: FormData; bookingId: string; onReset: () => void }) {
   const vehicle = VEHICLES.find(v => v.id === form.vehicle_type)
   return (
     <div style={{
@@ -300,9 +300,24 @@ function SuccessScreen({ form, onReset }: { form: FormData; onReset: () => void 
           hour: "2-digit", minute: "2-digit"
         })}
       </div>
-      <p style={{ color: "#888", fontSize: 13, marginBottom: 32 }}>
+      <p style={{ color: "#888", fontSize: 13, marginBottom: 24 }}>
         We'll send a confirmation to {form.phone}
       </p>
+      <a href={`/booking/${bookingId}`} style={{ textDecoration: "none", marginBottom: 12, width: "100%", maxWidth: 320 }}>
+        <button style={{
+          width: "100%",
+          padding: "14px 32px",
+          background: "#000",
+          color: "#fff",
+          border: "none",
+          borderRadius: 10,
+          fontSize: 15,
+          fontWeight: 700,
+          cursor: "pointer",
+        }}>
+          Track My Booking →
+        </button>
+      </a>
       <button onClick={onReset} style={{
         padding: "14px 32px",
         background: "white",
@@ -311,6 +326,8 @@ function SuccessScreen({ form, onReset }: { form: FormData; onReset: () => void 
         fontSize: 15,
         fontWeight: 600,
         cursor: "pointer",
+        width: "100%",
+        maxWidth: 320,
       }}>
         Book Another Ride
       </button>
@@ -331,6 +348,7 @@ export default function RiderPage() {
   const [location, setLocation] = useState<LocationCoords>({ lat: null, lng: null })
   const [loading, setLoading] = useState(false)
   const [booked, setBooked] = useState(false)
+  const [bookingId, setBookingId] = useState("")
   const [error, setError] = useState("")
 
   useEffect(() => {
@@ -387,26 +405,29 @@ export default function RiderPage() {
     setLoading(true)
     setError("")
 
-    const { error: dbError } = await supabase.from("bookings").insert([{
-      name: form.name,
-      phone: form.phone,
-      pickup: form.pickup,
-      destination: form.destination,
-      vehicle_type: form.vehicle_type,
-      ride_date: form.ride_date,
-      ride_time: form.ride_time,
-      notes: form.notes || null,
-      pickup_lat: location.lat,
-      pickup_lng: location.lng,
-      status: "pending",
-      fare_estimate: estimateFare(form.vehicle_type),
-    }])
+    try {
+      const { data, error: dbError } = await supabase.from("bookings").insert([{
+        name: form.name,
+        phone: form.phone,
+        pickup: form.pickup,
+        destination: form.destination,
+        vehicle_type: form.vehicle_type,
+        ride_date: form.ride_date,
+        ride_time: form.ride_time,
+        notes: form.notes || null,
+        pickup_lat: location.lat,
+        pickup_lng: location.lng,
+        status: "pending",
+        fare_estimate: estimateFare(form.vehicle_type),
+      }]).select()
 
-    setLoading(false)
-    if (dbError) {
-      setError("Booking failed: " + dbError.message)
-    } else {
+      if (dbError) throw new Error(dbError.message)
+      setBookingId(data![0].id)
       setBooked(true)
+    } catch (e: any) {
+      setError("Booking failed: " + e.message)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -419,7 +440,7 @@ export default function RiderPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  if (booked) return <SuccessScreen form={form} onReset={handleReset} />
+  if (booked) return <SuccessScreen form={form} bookingId={bookingId} onReset={handleReset} />
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f9fa", paddingBottom: 100 }}>

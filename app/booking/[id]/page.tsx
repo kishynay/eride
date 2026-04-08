@@ -1,200 +1,191 @@
 "use client"
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
-import { Booking, Driver } from "@/types"
-import { formatCurrency, formatDate, formatTime, sendWhatsAppNotification, generateBookingConfirmationMessage } from "@/utils"
 
-export default function BookingConfirmation({ params }: { params: { id: string } }) {
+import { useEffect, useState } from "react"
+import { useParams } from "next/navigation"
+import { supabase } from "../../../lib/supabase"
+
+interface Booking {
+  id: string
+  name: string
+  phone: string
+  pickup: string
+  destination: string
+  vehicle_type: string
+  ride_date: string
+  ride_time: string
+  notes: string
+  status: string
+  fare_estimate: string
+  driver_id: string | null
+  created_at: string
+}
+
+interface Driver {
+  name: string
+  phone: string
+  vehicle_type: string
+}
+
+const STATUS_STEPS = ["pending", "confirmed", "in-progress", "completed"]
+
+const STATUS_META: Record<string, { label: string; color: string; icon: string; desc: string }> = {
+  pending:     { label: "Pending",     color: "#f59e0b", icon: "⏳", desc: "Your booking is received. We're finding a driver." },
+  confirmed:   { label: "Confirmed",   color: "#3b82f6", icon: "✅", desc: "A driver has been assigned to your trip." },
+  "in-progress": { label: "On the Way", color: "#8b5cf6", icon: "🚗", desc: "Your driver is on the way." },
+  completed:   { label: "Completed",   color: "#16a34a", icon: "🎉", desc: "Your trip is complete. Thank you for riding with eRide!" },
+  cancelled:   { label: "Cancelled",   color: "#dc2626", icon: "❌", desc: "This booking has been cancelled." },
+}
+
+const VEHICLE_ICONS: Record<string, string> = {
+  car: "🚗", auto: "🛺", bike: "🏍️", van: "🚐", bus: "🚌", mini_truck: "🚛", tempo: "🚜"
+}
+
+export default function BookingStatusPage() {
+  const { id } = useParams<{ id: string }>()
   const [booking, setBooking] = useState<Booking | null>(null)
   const [driver, setDriver] = useState<Driver | null>(null)
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
     fetchBooking()
-  }, [params.id])
+
+    // Supabase Realtime
+    const channel = supabase
+      .channel(`booking-${id}`)
+      .on("postgres_changes", {
+        event: "UPDATE",
+        schema: "public",
+        table: "bookings",
+        filter: `id=eq.${id}`,
+      }, payload => {
+        setBooking(payload.new as Booking)
+        if (payload.new.driver_id) fetchDriver(payload.new.driver_id)
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [id])
 
   const fetchBooking = async () => {
-    const { data: bookingData } = await supabase
-      .from("bookings")
-      .select("*")
-      .eq("id", params.id)
-      .single()
-
-    if (bookingData) {
-      const bookingRecord = bookingData as any
-      setBooking(bookingRecord)
-      
-      if (bookingRecord.driver_id) {
-        const { data: driverData } = await supabase
-          .from("drivers")
-          .select("*")
-          .eq("id", bookingRecord.driver_id)
-          .single()
-        
-        if (driverData) setDriver(driverData)
-      }
-    }
-    setLoading(false)
+    const { data } = await supabase.from("bookings").select("*").eq("id", id).single()
+    if (!data) { setNotFound(true); return }
+    setBooking(data as Booking)
+    if (data.driver_id) fetchDriver(data.driver_id)
   }
 
-  const handleWhatsAppShare = () => {
-    if (!booking) return
-    const message = generateBookingConfirmationMessage(
-      booking.id,
-      booking.pickup_location,
-      booking.drop_location,
-      booking.fare,
-      booking.ride_date,
-      booking.ride_time
-    )
-    sendWhatsAppNotification("", message)
+  const fetchDriver = async (driverId: string) => {
+    const { data } = await supabase.from("drivers").select("name, phone, vehicle_type").eq("id", driverId).single()
+    if (data) setDriver(data as Driver)
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500" />
-      </div>
-    )
-  }
+  if (notFound) return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" }}>
+      <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
+      <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 8px" }}>Booking not found</h2>
+      <p style={{ color: "#888", fontSize: 14, margin: "0 0 24px" }}>The booking ID may be incorrect.</p>
+      <a href="/rider" style={{ textDecoration: "none" }}>
+        <button style={{ background: "#000", color: "#fff", border: "none", borderRadius: 10, padding: "12px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Book a Ride</button>
+      </a>
+    </div>
+  )
 
-  if (!booking) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-        <div className="text-center">
-          <p className="text-white text-xl mb-4">Booking not found</p>
-          <button
-            onClick={() => router.push("/rider")}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg"
-          >
-            Book a Ride
-          </button>
-        </div>
-      </div>
-    )
-  }
+  if (!booking) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <p style={{ color: "#888", fontSize: 15 }}>Loading...</p>
+    </div>
+  )
+
+  const meta = STATUS_META[booking.status] ?? STATUS_META["pending"]
+  const activeStep = STATUS_STEPS.indexOf(booking.status)
 
   return (
-    <div className="min-h-screen bg-gray-900 p-4">
-      <div className="max-w-2xl mx-auto pt-8">
-        {/* Success Animation */}
-        <div className="text-center mb-8">
-          <div className="inline-block animate-bounce mb-4">
-            <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center">
-              <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
+    <div style={{ minHeight: "100vh", background: "#f8f9fa", paddingBottom: 40 }}>
+      {/* Header */}
+      <div style={{ background: "#000", padding: "20px 20px 24px" }}>
+        <div style={{ maxWidth: 500, margin: "0 auto" }}>
+          <a href="/" style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, textDecoration: "none" }}>← eRide</a>
+          <h1 style={{ color: "#fff", fontSize: 20, fontWeight: 700, margin: "8px 0 4px" }}>Booking Status</h1>
+          <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, margin: 0, fontFamily: "monospace" }}>#{booking.id.slice(0, 8).toUpperCase()}</p>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 500, margin: "0 auto", padding: "20px 16px" }}>
+
+        {/* Status card */}
+        <div style={{ background: "#fff", borderRadius: 14, padding: 24, marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.07)", textAlign: "center" }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>{meta.icon}</div>
+          <div style={{ display: "inline-block", background: meta.color, color: "#fff", borderRadius: 20, padding: "4px 16px", fontSize: 13, fontWeight: 700, marginBottom: 12 }}>
+            {meta.label}
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Booking Confirmed!</h1>
-          <p className="text-gray-400">Your ride has been successfully booked</p>
+          <p style={{ fontSize: 14, color: "#666", margin: 0 }}>{meta.desc}</p>
         </div>
 
-        {/* Booking Details Card */}
-        <div className="bg-gray-800 rounded-xl p-6 mb-4">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <p className="text-gray-400 text-sm">Booking ID</p>
-              <p className="text-white font-mono">{booking.id.slice(0, 8)}</p>
-            </div>
-            <span className={`px-3 py-1 rounded-full text-sm ${
-              booking.status === "confirmed" ? "bg-green-500/20 text-green-400" :
-              booking.status === "assigned" ? "bg-blue-500/20 text-blue-400" :
-              "bg-yellow-500/20 text-yellow-400"
-            }`}>
-              {booking.status}
-            </span>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <p className="text-gray-400 text-sm mb-1">📍 Pickup</p>
-              <p className="text-white">{booking.pickup_location}</p>
-            </div>
-            <div>
-              <p className="text-gray-400 text-sm mb-1">📍 Drop</p>
-              <p className="text-white">{booking.drop_location}</p>
-            </div>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <p className="text-gray-400 text-sm mb-1">📅 Date</p>
-                <p className="text-white">{formatDate(booking.ride_date)}</p>
-              </div>
-              <div className="flex-1">
-                <p className="text-gray-400 text-sm mb-1">⏰ Time</p>
-                <p className="text-white">{formatTime(booking.ride_time)}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Fare Breakdown */}
-        <div className="bg-gray-800 rounded-xl p-6 mb-4">
-          <h3 className="text-white font-semibold mb-4">💰 Fare Details</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between text-gray-300">
-              <span>Vehicle Type</span>
-              <span className="capitalize">{booking.vehicle_type}</span>
-            </div>
-            {booking.distance_km && (
-              <div className="flex justify-between text-gray-300">
-                <span>Distance</span>
-                <span>{booking.distance_km} km</span>
-              </div>
-            )}
-            <div className="border-t border-gray-700 pt-2 mt-2">
-              <div className="flex justify-between text-white font-bold text-lg">
-                <span>Total Fare</span>
-                <span>{formatCurrency(booking.fare)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Driver Details */}
-        {driver && (
-          <div className="bg-gray-800 rounded-xl p-6 mb-4">
-            <h3 className="text-white font-semibold mb-4">🚗 Driver Details</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Name</span>
-                <span className="text-white">{driver.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Phone</span>
-                <a href={`tel:${driver.phone}`} className="text-blue-400">{driver.phone}</a>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Vehicle</span>
-                <span className="text-white">{driver.vehicle_number}</span>
-              </div>
-              {driver.rating && (
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Rating</span>
-                  <span className="text-yellow-400">⭐ {driver.rating.toFixed(1)}</span>
-                </div>
-              )}
+        {/* Progress stepper */}
+        {booking.status !== "cancelled" && (
+          <div style={{ background: "#fff", borderRadius: 14, padding: "20px 24px", marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              {STATUS_STEPS.map((s, i) => {
+                const done = i <= activeStep
+                const active = i === activeStep
+                return (
+                  <div key={s} style={{ display: "flex", alignItems: "center", flex: i < STATUS_STEPS.length - 1 ? 1 : "none" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                      <div style={{
+                        width: 28, height: 28, borderRadius: "50%",
+                        background: done ? "#000" : "#e5e7eb",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 12, color: done ? "#fff" : "#9ca3af", fontWeight: 700,
+                        border: active ? "2px solid #000" : "none",
+                        boxSizing: "border-box"
+                      }}>{done ? "✓" : i + 1}</div>
+                      <span style={{ fontSize: 9, color: done ? "#000" : "#9ca3af", fontWeight: done ? 700 : 400, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                        {STATUS_META[s]?.label}
+                      </span>
+                    </div>
+                    {i < STATUS_STEPS.length - 1 && (
+                      <div style={{ flex: 1, height: 2, background: i < activeStep ? "#000" : "#e5e7eb", margin: "0 4px", marginBottom: 18 }} />
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
 
-        {/* Actions */}
-        <div className="space-y-3">
-          <button
-            onClick={handleWhatsAppShare}
-            className="w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2"
-          >
-            <span>📱</span>
-            Share on WhatsApp
-          </button>
-          <button
-            onClick={() => router.push("/rider")}
-            className="w-full py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-semibold"
-          >
-            Book Another Ride
-          </button>
+        {/* Driver info */}
+        {driver && (
+          <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 14, padding: 20, marginBottom: 16 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: "#1d4ed8", margin: "0 0 12px", textTransform: "uppercase", letterSpacing: 1 }}>Your Driver</p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <p style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 700 }}>{driver.name}</p>
+                <p style={{ margin: 0, fontSize: 13, color: "#555" }}>{VEHICLE_ICONS[driver.vehicle_type]} {driver.vehicle_type}</p>
+              </div>
+              <a href={`tel:${driver.phone}`} style={{ textDecoration: "none" }}>
+                <button style={{ background: "#1d4ed8", color: "#fff", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                  📞 Call
+                </button>
+              </a>
+            </div>
+          </div>
+        )}
+
+        {/* Trip details */}
+        <div style={{ background: "#fff", borderRadius: 14, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: "#888", margin: "0 0 12px", textTransform: "uppercase", letterSpacing: 1 }}>Trip Details</p>
+          {[
+            ["Vehicle", `${VEHICLE_ICONS[booking.vehicle_type] ?? ""} ${booking.vehicle_type}`],
+            ["Date", `${booking.ride_date} at ${booking.ride_time}`],
+            ["Pickup", booking.pickup],
+            ["Drop", booking.destination],
+            ["Fare (est.)", booking.fare_estimate],
+            ...(booking.notes ? [["Notes", booking.notes]] : []),
+          ].map(([label, value]) => (
+            <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", borderBottom: "1px solid #f3f4f6", gap: 12 }}>
+              <span style={{ fontSize: 13, color: "#888", flexShrink: 0 }}>{label}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, textAlign: "right" }}>{value}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

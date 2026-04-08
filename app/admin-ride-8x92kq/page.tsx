@@ -6,6 +6,7 @@ export default function Admin() {
   const [authenticated, setAuthenticated] = useState(false)
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [loginError, setLoginError] = useState("")
   const [bookings, setBookings] = useState<any[]>([])
   const [drivers, setDrivers] = useState<any[]>([])
   const [menuOpen, setMenuOpen] = useState(false)
@@ -23,7 +24,7 @@ export default function Admin() {
       setAuthenticated(true)
       localStorage.setItem("admin_auth", "true")
     } else {
-      alert("Incorrect username or password")
+      setLoginError("Incorrect username or password")
       setUsername("")
       setPassword("")
     }
@@ -96,16 +97,17 @@ export default function Admin() {
   }
 
   useEffect(() => {
-    if (authenticated) {
-      fetchBookings()
-      fetchDrivers()
+    if (!authenticated) return
+    fetchBookings()
+    fetchDrivers()
 
-      const interval = setInterval(() => {
-        fetchBookings()
-      }, 3000)
+    const channel = supabase
+      .channel("admin-bookings")
+      .on("postgres_changes", { event: "*", schema: "public", table: "bookings" }, () => fetchBookings())
+      .on("postgres_changes", { event: "*", schema: "public", table: "drivers" }, () => fetchDrivers())
+      .subscribe()
 
-      return () => clearInterval(interval)
-    }
+    return () => { supabase.removeChannel(channel) }
   }, [authenticated])
 
   if (!authenticated) {
@@ -160,7 +162,7 @@ export default function Admin() {
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setLoginError("") }}
               placeholder="Password"
               style={{
                 width: "100%",
@@ -172,6 +174,11 @@ export default function Admin() {
                 boxSizing: "border-box"
               }}
             />
+            {loginError && (
+              <div style={{ marginBottom: 12, padding: "10px 14px", background: "#fff0f0", border: "1px solid #fecaca", borderRadius: 8, color: "#dc2626", fontSize: 13 }}>
+                ⚠️ {loginError}
+              </div>
+            )}
             <button
               type="submit"
               style={{
