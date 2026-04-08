@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>eRide - Gaadi Booking for Villages & Cities | Scheduled Rides</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', 'Noto Sans', system-ui, sans-serif; background: #ffffff; color: #1e1e1e; line-height: 1.5; }
+        .container { max-width: 500px; margin: 0 auto; padding: 20px 16px 40px; }
+        .logo { font-size: 28px; font-weight: 800; color: #0a7c3e; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .logo span { background: #0a7c3e; color: white; font-size: 14px; padding: 2px 10px; border-radius: 30px; margin-left: 10px; }
+        .tagline { font-size: 22px; font-weight: 700; margin: 16px 0 8px; color: #1e1e1e; }
+        .subhead { color: #555; margin-bottom: 24px; font-size: 16px; }
+        .trust-badges { display: flex; justify-content: space-around; background: #f0f7f1; padding: 12px 8px; border-radius: 40px; margin-bottom: 28px; }
+        .badge-item { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #0a5c2e; }
+        .booking-card { background: #ffffff; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); padding: 24px 20px; border: 1px solid #e2e8f0; margin-bottom: 24px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-weight: 600; font-size: 15px; margin-bottom: 6px; color: #2d3748; }
+        input, select { width: 100%; padding: 14px 16px; font-size: 16px; border: 1.5px solid #e2e8f0; border-radius: 16px; background: #fafafa; }
+        input:focus, select:focus { border-color: #0a7c3e; background: white; outline: none; box-shadow: 0 0 0 3px rgba(10,124,62,0.1); }
+        .double-input { display: flex; gap: 12px; }
+        .double-input .form-group { flex: 1; }
+        .village-toggle { background: #f7fafc; padding: 16px; border-radius: 20px; margin-bottom: 20px; }
+        .toggle-label { display: flex; align-items: center; gap: 12px; cursor: pointer; font-weight: 600; }
+        .toggle-label input { width: 22px; height: 22px; accent-color: #0a7c3e; }
+        .landmark-select { margin-top: 16px; display: none; }
+        .landmark-select.show { display: block; }
+        .btn-primary { background: #0a7c3e; color: white; border: none; width: 100%; padding: 18px; font-size: 18px; font-weight: 700; border-radius: 40px; cursor: pointer; box-shadow: 0 4px 12px rgba(10,124,62,0.3); }
+        .btn-primary:hover { background: #086a34; }
+        .whatsapp-section { text-align: center; margin: 24px 0 16px; }
+        .btn-wa { background: #25D366; color: white; text-decoration: none; padding: 16px 24px; border-radius: 50px; font-weight: 700; font-size: 18px; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(37,211,102,0.3); }
+        .helper-text { font-size: 14px; color: #666; margin-top: 8px; }
+        .features { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 32px; }
+        .feature { background: #f8fafc; padding: 16px; border-radius: 20px; text-align: center; }
+        .feature .emoji { font-size: 28px; margin-bottom: 8px; }
+        .feature h4 { font-size: 15px; margin-bottom: 4px; }
+        .feature p { font-size: 13px; color: #64748b; }
+        .footer { margin-top: 40px; text-align: center; color: #94a3b8; font-size: 13px; }
+        .lang-note { display: inline-block; background: #eee; padding: 4px 12px; border-radius: 20px; font-size: 13px; margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🚕 eRide <span>Bharat</span></div>
+        <div class="tagline">Gaadi Book Karo, <br>Date & Time Chuno</div>
+        <div class="subhead">✓ Scheduled rides for villages & cities <br>✓ No surge pricing • Cash accepted</div>
+        <div class="trust-badges">
+            <div class="badge-item">✅ Verified Drivers</div>
+            <div class="badge-item">💵 Pay Cash</div>
+            <div class="badge-item">📞 24/7 Support</div>
+        </div>
+        <div class="booking-card">
+            <form action="/booking/create" method="POST">
+                <div class="form-group">
+                    <label>📍 Pickup Location</label>
+                    <input type="text" name="pickupAddress" id="pickupAddressInput" placeholder="Enter area, landmark or village" required>
+                </div>
+                <div class="village-toggle">
+                    <label class="toggle-label">
+                        <input type="checkbox" id="villageModeCheckbox">
+                        <span>🏞️ Use Village/Landmark Mode (No exact address needed)</span>
+                    </label>
+                    <div class="landmark-select" id="landmarkSelectWrapper">
+                        <label>Select Pickup Landmark</label>
+                        <select name="pickupLandmark" id="pickupLandmarkSelect" disabled>
+                            <option value="">-- Choose common landmark --</option>
+                            <option value="Bus Stand">🚌 Bus Stand</option>
+                            <option value="Main Chauraha">🛣️ Main Chauraha</option>
+                            <option value="Panchayat Bhawan">🏛️ Panchayat Bhawan</option>
+                            <option value="Primary School">🏫 Primary School</option>
+                            <option value="Temple">🛕 Temple</option>
+                            <option value="Hospital">🏥 Hospital</option>
+                            <option value="Railway Station">🚂 Railway Station</option>
+                        </select>
+                        <p style="font-size: 13px; color: #666; margin-top: 6px;">Driver will call you for exact location.</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>🏁 Drop Location</label>
+                    <input type="text" name="dropAddress" placeholder="Where to?" required>
+                </div>
+                <div class="double-input">
+                    <div class="form-group">
+                        <label>📅 Pickup Date</label>
+                        <input type="date" name="pickupDate" id="pickupDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>⏰ Time</label>
+                        <input type="time" name="pickupTime" id="pickupTime" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>🚖 Vehicle Type</label>
+                    <select name="vehicleType" required>
+                        <option value="auto">🛺 Auto Rickshaw (Budget)</option>
+                        <option value="hatchback" selected>🚗 Hatchback (WagonR / Indica)</option>
+                        <option value="sedan">🚙 Sedan (Dzire / Etios)</option>
+                    </select>
+                </div>
+                <div class="double-input">
+                    <div class="form-group">
+                        <label>👤 Your Name</label>
+                        <input type="text" name="passengerName" placeholder="Full name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>📞 Phone Number</label>
+                        <input type="tel" name="passengerPhone" pattern="[0-9]{10}" placeholder="10-digit number" required>
+                    </div>
+                </div>
+                <input type="hidden" name="bookingSource" value="web">
+                <button type="submit" class="btn-primary">🚀 Confirm Booking (Pay Cash to Driver)</button>
+            </form>
+        </div>
+        <div class="whatsapp-section">
+            <a href="https://wa.me/919876543210?text=Hello%20eRide%2C%20I%20need%20a%20ride%20from%20%5BLandmark%5D%20to%20%5BDestination%5D%20on%20%5BDate%5D%20at%20%5BTime%5D" target="_blank" class="btn-wa">
+                <span style="font-size: 24px;">📱</span> Book via WhatsApp Voice Note
+            </a>
+            <p class="helper-text">No smartphone? Just send a voice message.</p>
+        </div>
+        <div class="features">
+            <div class="feature"><div class="emoji">📆</div><h4>Advance Booking</h4><p>Book for tomorrow, next week, anytime</p></div>
+            <div class="feature"><div class="emoji">🏘️</div><h4>Village Friendly</h4><p>Landmark-based pickup, no GPS needed</p></div>
+            <div class="feature"><div class="emoji">👨‍✈️</div><h4>Verified Drivers</h4><p>Local drivers you can trust</p></div>
+            <div class="feature"><div class="emoji">💬</div><h4>WhatsApp Support</h4><p>Book even without the app</p></div>
+        </div>
+        <div class="footer">
+            <p>📞 Helpline: +91 98765 43210 (8AM - 10PM)</p>
+            <p style="margin-top: 12px;">© eRide Bharat • Serving Tier-2, Tier-3 cities & villages</p>
+        </div>
+    </div>
+    <script>
+        const villageCheckbox = document.getElementById('villageModeCheckbox');
+        const landmarkWrapper = document.getElementById('landmarkSelectWrapper');
+        const landmarkSelect = document.getElementById('pickupLandmarkSelect');
+        const addressInput = document.getElementById('pickupAddressInput');
+        villageCheckbox.addEventListener('change', function(e) {
+            if (this.checked) {
+                landmarkWrapper.classList.add('show');
+                landmarkSelect.disabled = false;
+                landmarkSelect.required = true;
+                addressInput.required = false;
+                addressInput.style.display = 'none';
+                addressInput.value = '';
+            } else {
+                landmarkWrapper.classList.remove('show');
+                landmarkSelect.disabled = true;
+                landmarkSelect.required = false;
+                addressInput.required = true;
+                addressInput.style.display = 'block';
+                landmarkSelect.value = '';
+            }
+        });
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('pickupDate').setAttribute('min', today);
+        const now = new Date();
+        now.setHours(now.getHours() + 1);
+        const defaultTime = now.toTimeString().slice(0,5);
+        document.getElementById('pickupTime').value = defaultTime;
+    </script>
+</body>
+</html>
