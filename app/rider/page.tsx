@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect, useRef } from "react"
-import { supabase } from "../../lib/supabase"
+import { supabase } from "@/lib/supabase"
 
 declare global {
   interface Window { google: any }
@@ -529,7 +529,7 @@ export default function RiderPage() {
           padding: "22px 20px",
           boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
         }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px", color: "#1a1a1a" }}>
             Step {step + 1}: {STEPS[step]}
           </h2>
 
@@ -612,6 +612,7 @@ const styles = {
     background: "#fafafa",
     outline: "none",
     fontFamily: "inherit",
+    color: "#1a1a1a",
   },
   inputIcon: {
     position: "absolute" as const,
@@ -635,7 +636,7 @@ const styles = {
   },
   stepSubtitle: {
     fontSize: 14,
-    color: "#888",
+    color: "#666",
     margin: "4px 0 20px",
   },
 }

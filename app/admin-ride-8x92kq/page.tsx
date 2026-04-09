@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useState } from "react"
-import { supabase } from "../../lib/supabase"
+import { supabase } from "@/lib/supabase"
 
 const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""
 
@@ -279,6 +279,6 @@ export default function Admin() {
 
 const s = {
   label: { display: "block" as const, fontSize: 13, fontWeight: 600, color: "#444", marginBottom: 6 },
-  input: { width: "100%", padding: "12px 14px", border: "1.5px solid #e8e8e8", borderRadius: 10, fontSize: 15, boxSizing: "border-box" as const, background: "#fafafa", outline: "none", fontFamily: "inherit" },
+  input: { width: "100%", padding: "12px 14px", border: "1.5px solid #e8e8e8", borderRadius: 10, fontSize: 15, boxSizing: "border-box" as const, background: "#fafafa", outline: "none", fontFamily: "inherit", color: "#1a1a1a" },
   btn: { color: "#fff" as const, border: "none" as const, borderRadius: 8, padding: "10px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer" as const },
 }

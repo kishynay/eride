@@ -1,6 +1,6 @@
 "use client"
 import { Suspense, useState, useEffect, type FormEvent } from "react"
-import { supabase } from "../../lib/supabase"
+import { supabase } from "@/lib/supabase"
 import { useSearchParams } from "next/navigation"
 
 function FeedbackPageContent() {
